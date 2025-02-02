@@ -12,7 +12,13 @@ import (
 
 type TemplateData struct {
     Title string
-    Page string
+    Page template.HTML
+}
+
+type CreatePostData struct {
+    Title string
+    Text string
+    Publish bool
 }
 
 const TITLE string = "Microblog"
@@ -48,27 +54,43 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
     postId = fmt.Sprintf("%v.md", postId)
 
     if !posts[postId] {
-        renderPage(w, "index.html", "Post not found!")
+        renderPage(w, "error.html", "Post not found!")
         return
     }
 
     md, err := os.ReadFile("posts/" + postId)
     if err != nil {
-        renderPage(w, "index.html", "Post not found!")
+        renderPage(w, "error.html", "Post not found!")
         return
     }
 
-    renderPage(w, "index.html", string(md))
+    renderPage(w, "index.html", template.HTML(md))
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
-    // Implement logic to create new posts
+    if r.Method == "GET" {
+        form := CreatePostData{}
+        renderPage(w, "create.html", form)
+        return
+    } else if r.Method == "POST" {
+        err := r.ParseForm()
+        if err != nil {
+            renderPage(w, "create.html", "Failed to parse data!")
+            return
+        }
+        publish := r.PostFormValue("publish") != ""
+        form := CreatePostData{Title: r.PostFormValue("title"), Text: r.PostFormValue("data"), Publish: publish}
+        renderPage(w, "create.html", form)
+        return
+    }
+    renderPage(w, "error.html", "Page not found!")
+    return
 }
 
 func renderPage(w http.ResponseWriter, tmpl string, data any) {
     var buf *bytes.Buffer = bytes.NewBuffer([]byte{})
     templates.ExecuteTemplate(buf, tmpl, data)
-    s := string(buf.Bytes())
+    s := template.HTML(buf.Bytes())
     templatedata := TemplateData{Title: TITLE, Page: s}
 
     templates.ExecuteTemplate(w, "_base.html", templatedata)
