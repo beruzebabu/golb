@@ -4,10 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
+
+	"github.com/yuin/goldmark"
 )
 
 type TemplateData struct {
@@ -19,6 +25,11 @@ type CreatePostData struct {
     Title string
     Text string
     Publish bool
+}
+
+type PostData struct {
+    Title string
+    Text template.HTML
 }
 
 const TITLE string = "Microblog"
@@ -37,7 +48,7 @@ func main() {
 
     http.Handle("/files/", http.FileServer(http.Dir("")))
     http.HandleFunc("/", homeHandler)
-    http.HandleFunc("/posts", postsHandler)
+    http.HandleFunc("/posts", homeHandler)
     http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
     fmt.Println("Server running on http://localhost:8080")
@@ -45,8 +56,55 @@ func main() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-    renderPage(w, "index.html", "Welcome to Microblog!")
-    // fmt.Fprintf(w, "Welcome to Microblog!")
+    dfs := os.DirFS("posts")
+    postlist, err := fs.ReadDir(dfs, ".")
+    if err != nil {
+        log.Println(err)
+        renderPage(w, "error.html", "Something went wrong, please check back later!")
+        return
+    }
+
+    slices.SortStableFunc(postlist, func(a fs.DirEntry, b fs.DirEntry) int {
+        ainfo, err := a.Info()
+        if err != nil {
+            log.Println(err)
+            return 0
+        }
+        binfo, err := b.Info()
+        if err != nil {
+            log.Println(err)
+            return 0
+        }
+
+        return binfo.ModTime().Compare(ainfo.ModTime())
+    })
+    var postsdata []PostData
+    for _, post := range postlist {
+        fmt.Println(post)
+        info, err := post.Info()
+        if err != nil {
+            log.Println(err)
+            renderPage(w, "error.html", "Something went wrong, please check back later!")
+            return
+        }
+        fmt.Println(info.ModTime())
+        file, err := dfs.Open(post.Name())
+        defer file.Close()
+        if err != nil {
+            log.Println(err)
+            renderPage(w, "error.html", "Something went wrong, please check back later!")
+            return
+        }
+        postdata, err := parsePost(file)
+        if err != nil {
+            log.Println(err)
+            renderPage(w, "error.html", "Something went wrong, please check back later!")
+            return
+        }
+        postsdata = append(postsdata, postdata)
+    }
+
+    renderPage(w, "index.html", postsdata)
 }
 
 func postsHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +118,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 
     md, err := os.ReadFile("posts/" + postId)
     if err != nil {
+        log.Println(err)
         renderPage(w, "error.html", "Post not found!")
         return
     }
@@ -75,6 +134,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
     } else if r.Method == "POST" {
         err := r.ParseForm()
         if err != nil {
+            log.Println(err)
             renderPage(w, "create.html", "Failed to parse data!")
             return
         }
@@ -94,4 +154,17 @@ func renderPage(w http.ResponseWriter, tmpl string, data any) {
     templatedata := TemplateData{Title: TITLE, Page: s}
 
     templates.ExecuteTemplate(w, "_base.html", templatedata)
+}
+
+func parsePost(file fs.File) (PostData, error) {
+    fbytes, err := io.ReadAll(file)
+    if err != nil {
+        log.Println(err)
+        return PostData{}, err
+    }
+
+    var markdown strings.Builder
+    err = goldmark.Convert(fbytes, &markdown)
+    splitstrings := strings.Split(string(fbytes), "\n")
+    return PostData{Title: splitstrings[0], Text: template.HTML(markdown.String())}, nil
 }
