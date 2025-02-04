@@ -78,6 +78,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
         return binfo.ModTime().Compare(ainfo.ModTime())
     })
+    
     var postsdata []PostData
     for _, post := range postlist {
         fmt.Println(post)

@@ -1,1 +1,6 @@
-{{.}}
+{{range .}}
+	<h3>{{.Title}}</h3>
+	<p>{{.Text}}</p>
+{{else}}
+	<h3>There are no posts...</h3>
+{{end}}
