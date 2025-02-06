@@ -59,7 +59,7 @@ func main() {
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
 	fmt.Println("Server running on http://localhost:8080")
-    go refreshPosts(5)
+    go refreshPosts(30)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -92,7 +92,6 @@ func refreshPosts(sleepseconds int) {
         mutex.Lock()
         posts = availablePosts
         mutex.Unlock()
-        fmt.Println(posts)
     }
 }
 
