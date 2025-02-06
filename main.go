@@ -34,6 +34,7 @@ type CreatePostData struct {
 type PostData struct {
 	Title string
     Timestamp string
+    URL string
 	Text  template.HTML
 }
 
@@ -121,7 +122,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-		postdata, err := parsePost(filebytes)
+		postdata, err := parsePost(filebytes, post.Name())
 		if err != nil {
 			log.Println(err, post.Name())
 			renderPage(w, "error.html", "Something went wrong, please check back later!")
@@ -162,7 +163,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    postdata, err := parsePost(md)
+    postdata, err := parsePost(md, postId)
     if err != nil {
         log.Println(err, postId)
         renderPage(w, "error.html", "Something went wrong, please check back later!")
@@ -219,7 +220,7 @@ func renderPage(w http.ResponseWriter, tmpl string, data any) {
 	templates.ExecuteTemplate(w, "_base.html", templatedata)
 }
 
-func parsePost(filebytes []byte) (PostData, error) {
+func parsePost(filebytes []byte, postId string) (PostData, error) {
     rstring := strings.ReplaceAll(string(filebytes), "\r", "")
 	splitstrings := strings.Split(rstring, "\n")
     index := slices.Index(splitstrings, "---")
@@ -235,7 +236,7 @@ func parsePost(filebytes []byte) (PostData, error) {
     if err != nil {
         return PostData{}, err
     }
-	return PostData{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, Text: template.HTML(markdown.String())}, nil
+	return PostData{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md"), Text: template.HTML(markdown.String())}, nil
 }
 
 func writePost(data CreatePostData) error {

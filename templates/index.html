@@ -1,5 +1,5 @@
 {{range .}}
-	<div class="post">{{.Text}}</div>
+	<div class="post"><a href="posts/{{.URL}}">{{.Title}}</a></div>
 {{else}}
 	<div class="post">There are no posts...</div>
 {{end}}
