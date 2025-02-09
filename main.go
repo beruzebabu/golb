@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -19,6 +20,10 @@ import (
 
 	"github.com/yuin/goldmark"
 )
+
+type BlogConfiguration struct {
+	Title string
+}
 
 type TemplateData struct {
 	Title string
@@ -48,7 +53,18 @@ var templates *template.Template = template.Must(template.ParseGlob("templates/*
 var posts map[string]bool = map[string]bool{}
 var mutex sync.Mutex
 
+var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE}
+
+func parseFlags() BlogConfiguration {
+	title := flag.String("title", TITLE, "specifies the blog title")
+	flag.Parse()
+
+	return BlogConfiguration{Title: *title}
+}
+
 func main() {
+	blogConfig = parseFlags()
+
 	availablePosts, err := updatePostsList()
 	if err != nil {
 		log.Fatal(err)
@@ -219,7 +235,7 @@ func renderPage(w http.ResponseWriter, tmpl string, data any) {
 	var buf *bytes.Buffer = bytes.NewBuffer([]byte{})
 	templates.ExecuteTemplate(buf, tmpl, data)
 	s := template.HTML(buf.Bytes())
-	templatedata := TemplateData{Title: TITLE, Page: s}
+	templatedata := TemplateData{Title: blogConfig.Title, Page: s}
 
 	templates.ExecuteTemplate(w, "_base.html", templatedata)
 }
