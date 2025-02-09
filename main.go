@@ -138,11 +138,11 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	slices.SortStableFunc(postsheaders, func(a PostHeader, b PostHeader) int {
 		atime, err := time.Parse(time.RFC1123, a.Timestamp)
 		if err != nil {
-			return 0
+			return -1
 		}
 		btime, err := time.Parse(time.RFC1123, b.Timestamp)
 		if err != nil {
-			return 0
+			return 1
 		}
 
 		return btime.Compare(atime)
