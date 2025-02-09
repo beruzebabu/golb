@@ -1,10 +1,25 @@
-.checkbox-container {
+body {
+    min-height: 96vh;
+    display: flex;
+    flex-direction: column;
+}
+
+app {
+    flex-grow: 1;
+}
+
+app .checkbox-container {
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
 }
 
-.checkbox-container label, .checkbox-container input {
+app .checkbox-container label, app .checkbox-container input {
 	display: inline-block;
 	float: right;
+}
+
+app .postsummary {
+    display: flex;
+    justify-content: space-between;
 }
