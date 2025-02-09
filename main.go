@@ -31,11 +31,15 @@ type CreatePostData struct {
 	Publish bool
 }
 
+type PostHeader struct {
+	Title     string
+	Timestamp string
+	URL       string
+}
+
 type PostData struct {
-	Title string
-    Timestamp string
-    URL string
-	Text  template.HTML
+	PostHeader
+	Text template.HTML
 }
 
 const TITLE string = "Microblog"
@@ -50,9 +54,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-    mutex.Lock()
+	mutex.Lock()
 	posts = availablePosts
-    mutex.Unlock()
+	mutex.Unlock()
 
 	http.Handle("/files/", http.FileServer(http.Dir("")))
 	http.HandleFunc("/", homeHandler)
@@ -60,7 +64,7 @@ func main() {
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
 	fmt.Println("Server running on http://localhost:8080")
-    go refreshPosts(30)
+	go refreshPosts(30)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -79,21 +83,21 @@ func updatePostsList() (map[string]bool, error) {
 }
 
 func refreshPosts(sleepseconds int) {
-    for {
-        time.Sleep(time.Duration(sleepseconds) * time.Second)
-        var availablePosts map[string]bool = map[string]bool{}
-        postlist, err := filepath.Glob("posts/*.md")
-        if err != nil {
-            log.Println(err)
-        }
+	for {
+		time.Sleep(time.Duration(sleepseconds) * time.Second)
+		var availablePosts map[string]bool = map[string]bool{}
+		postlist, err := filepath.Glob("posts/*.md")
+		if err != nil {
+			log.Println(err)
+		}
 
-        for _, post := range postlist {
-            availablePosts[filepath.Base(post)] = true
-        }
-        mutex.Lock()
-        posts = availablePosts
-        mutex.Unlock()
-    }
+		for _, post := range postlist {
+			availablePosts[filepath.Base(post)] = true
+		}
+		mutex.Lock()
+		posts = availablePosts
+		mutex.Unlock()
+	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +109,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var postsdata []PostData
+	var postsheaders []PostHeader
 	for _, post := range postlist {
 		file, err := dfs.Open(post.Name())
 		defer file.Close()
@@ -115,36 +119,36 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-        filebytes, err := io.ReadAll(file)
-        if err != nil {
-            log.Println(err, post.Name())
-            renderPage(w, "error.html", "Something went wrong, please check back later!")
-            return
-        }
-
-		postdata, err := parsePost(filebytes, post.Name())
+		filebytes, err := io.ReadAll(file)
 		if err != nil {
 			log.Println(err, post.Name())
 			renderPage(w, "error.html", "Something went wrong, please check back later!")
 			return
 		}
-		postsdata = append(postsdata, postdata)
+
+		postheader, err := parsePostHeader(filebytes, post.Name())
+		if err != nil {
+			log.Println(err, post.Name())
+			renderPage(w, "error.html", "Something went wrong, please check back later!")
+			return
+		}
+		postsheaders = append(postsheaders, postheader)
 	}
 
-    slices.SortStableFunc(postsdata, func(a PostData, b PostData) int {
-        atime, err := time.Parse(time.RFC1123, a.Timestamp)
-        if err != nil {
-            return 0
-        }
-        btime, err := time.Parse(time.RFC1123, b.Timestamp)
-        if err != nil {
-            return 0
-        }
+	slices.SortStableFunc(postsheaders, func(a PostHeader, b PostHeader) int {
+		atime, err := time.Parse(time.RFC1123, a.Timestamp)
+		if err != nil {
+			return 0
+		}
+		btime, err := time.Parse(time.RFC1123, b.Timestamp)
+		if err != nil {
+			return 0
+		}
 
-        return btime.Compare(atime)
-    })
+		return btime.Compare(atime)
+	})
 
-	renderPage(w, "index.html", postsdata)
+	renderPage(w, "index.html", postsheaders)
 }
 
 func postsHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,12 +167,12 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    postdata, err := parsePost(md, postId)
-    if err != nil {
-        log.Println(err, postId)
-        renderPage(w, "error.html", "Something went wrong, please check back later!")
-        return
-    }
+	postdata, err := parsePost(md, postId)
+	if err != nil {
+		log.Println(err, postId)
+		renderPage(w, "error.html", "Something went wrong, please check back later!")
+		return
+	}
 
 	renderPage(w, "post.html", postdata)
 }
@@ -187,23 +191,23 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		publish := r.PostFormValue("publish") != ""
 		form := CreatePostData{Title: r.PostFormValue("title"), Text: r.PostFormValue("data"), Publish: publish}
-        if publish {
-            err = writePost(form)
-            if err != nil {
-                log.Println(err)
-                renderPage(w, "create.html", "Failed publish post!")
-                return
-            }
-            availablePosts, err := updatePostsList()
-            if err != nil {
-                log.Println(err)
-                renderPage(w, "create.html", "Failed to update list of published posts!")
-                return
-            }
-            mutex.Lock()
-            posts = availablePosts
-            mutex.Unlock()
-        }
+		if publish {
+			err = writePost(form)
+			if err != nil {
+				log.Println(err)
+				renderPage(w, "create.html", "Failed publish post!")
+				return
+			}
+			availablePosts, err := updatePostsList()
+			if err != nil {
+				log.Println(err)
+				renderPage(w, "create.html", "Failed to update list of published posts!")
+				return
+			}
+			mutex.Lock()
+			posts = availablePosts
+			mutex.Unlock()
+		}
 		renderPage(w, "create.html", form)
 		return
 	}
@@ -220,38 +224,52 @@ func renderPage(w http.ResponseWriter, tmpl string, data any) {
 	templates.ExecuteTemplate(w, "_base.html", templatedata)
 }
 
-func parsePost(filebytes []byte, postId string) (PostData, error) {
-    rstring := strings.ReplaceAll(string(filebytes), "\r", "")
+func parsePostHeader(filebytes []byte, postId string) (PostHeader, error) {
+	rstring := strings.ReplaceAll(string(filebytes), "\r", "")
 	splitstrings := strings.Split(rstring, "\n")
-    index := slices.Index(splitstrings, "---")
-    if index == -1 || len(splitstrings) < 2 || index >= len(splitstrings) {
-        return PostData{}, errors.New("Invalid post format, cannot parse post")
-    }
-    var timestamp string
-    if index >= 2 {
-        timestamp = strings.TrimPrefix(splitstrings[1], "###### ")
-    }
-    var markdown strings.Builder
-    err := goldmark.Convert([]byte(strings.Join(splitstrings, "\n")), &markdown)
-    if err != nil {
-        return PostData{}, err
-    }
-	return PostData{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md"), Text: template.HTML(markdown.String())}, nil
+	index := slices.Index(splitstrings, "---")
+	if index == -1 || len(splitstrings) < 2 || index >= len(splitstrings) {
+		return PostHeader{}, errors.New("Invalid post format, cannot parse post")
+	}
+	var timestamp string
+	if index >= 2 {
+		timestamp = strings.TrimPrefix(splitstrings[1], "###### ")
+	}
+	return PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md")}, nil
+}
+
+func parsePost(filebytes []byte, postId string) (PostData, error) {
+	rstring := strings.ReplaceAll(string(filebytes), "\r", "")
+	splitstrings := strings.Split(rstring, "\n")
+	index := slices.Index(splitstrings, "---")
+	if index == -1 || len(splitstrings) < 2 || index >= len(splitstrings) {
+		return PostData{}, errors.New("Invalid post format, cannot parse post")
+	}
+	var timestamp string
+	if index >= 2 {
+		timestamp = strings.TrimPrefix(splitstrings[1], "###### ")
+	}
+	var markdown strings.Builder
+	err := goldmark.Convert([]byte(strings.Join(splitstrings, "\n")), &markdown)
+	if err != nil {
+		return PostData{}, err
+	}
+	return PostData{PostHeader: PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md")}, Text: template.HTML(markdown.String())}, nil
 }
 
 func writePost(data CreatePostData) error {
-    var stringbuilder strings.Builder
-    stringbuilder.WriteString("### " + data.Title + "\n")
-    stringbuilder.WriteString("###### " + time.Now().Format(time.RFC1123) + "\n")
-    stringbuilder.WriteString("---\n")
-    stringbuilder.WriteString(data.Text)
+	var stringbuilder strings.Builder
+	stringbuilder.WriteString("### " + data.Title + "\n")
+	stringbuilder.WriteString("###### " + time.Now().Format(time.RFC1123) + "\n")
+	stringbuilder.WriteString("---\n")
+	stringbuilder.WriteString(data.Text)
 
-    filename := url.QueryEscape(strings.ToLower(data.Title)) + ".md"
+	filename := url.QueryEscape(strings.ToLower(data.Title)) + ".md"
 
-    err := os.WriteFile("posts/" + filename, []byte(stringbuilder.String()), 0700)
-    if err != nil {
-        return err
-    }
+	err := os.WriteFile("posts/"+filename, []byte(stringbuilder.String()), 0700)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
