@@ -2,6 +2,10 @@ package main
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +28,8 @@ import (
 
 type BlogConfiguration struct {
 	Title string
+	Hash string
+	Salt [4]byte
 }
 
 type TemplateData struct {
@@ -51,34 +58,58 @@ const TITLE string = "Microblog"
 
 var templates *template.Template = template.Must(template.ParseGlob("templates/*.html"))
 var posts map[string]bool = map[string]bool{}
-var mutex sync.Mutex
+var sessions map[uint32]time.Time = map[uint32]time.Time{}
+var postsMutex sync.Mutex
+var sessionsMutex sync.Mutex
 
 var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE}
 
+func calcHash(text string, seed []byte) string {
+	h := crypto.SHA256.New()
+	h.Write(seed)
+	h.Write([]byte(text + TITLE))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func parseFlags() BlogConfiguration {
 	title := flag.String("title", TITLE, "specifies the blog title")
+	password := flag.String("password", "", "specifies the management password")
 	flag.Parse()
 
-	return BlogConfiguration{Title: *title}
+	if *password == "" {
+		log.Fatal("management password is required")
+	}
+
+	randbytes := make([]byte, 4)
+	_, err := rand.Read(randbytes)
+	if err != nil {
+		log.Fatal("couldn't read cryptographically secure rand")
+	}
+	hashed := calcHash(*password, randbytes)
+
+	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes)}
 }
 
 func main() {
 	blogConfig = parseFlags()
+
+	fmt.Println(blogConfig)
 
 	availablePosts, err := updatePostsList()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	mutex.Lock()
+	postsMutex.Lock()
 	posts = availablePosts
-	mutex.Unlock()
+	postsMutex.Unlock()
 
 	http.Handle("/files/", http.FileServer(http.Dir("")))
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/posts", homeHandler)
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
+	http.HandleFunc("/login", loginHandler)
 	fmt.Println("Server running on http://localhost:8080")
 	go refreshPosts(30)
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -110,9 +141,9 @@ func refreshPosts(sleepseconds int) {
 		for _, post := range postlist {
 			availablePosts[filepath.Base(post)] = true
 		}
-		mutex.Lock()
+		postsMutex.Lock()
 		posts = availablePosts
-		mutex.Unlock()
+		postsMutex.Unlock()
 	}
 }
 
@@ -194,6 +225,30 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
+	hcookie, err := r.Cookie("microblog_h")
+	if err != nil {
+		renderPage(w, "login.html", nil)
+		return
+	}
+
+	fmt.Println(hcookie.String())
+	cookieid, err := strconv.ParseUint(hcookie.Value, 10, 32)
+	if err != nil {
+		renderPage(w, "login.html", nil)
+		return
+	}
+
+	sessionsMutex.Lock()
+	sess, ok := sessions[uint32(cookieid)]
+	sessionsMutex.Unlock()
+
+	if !ok {
+		renderPage(w, "login.html", nil)
+		return
+	}
+
+	fmt.Println(sess)
+
 	if r.Method == "GET" {
 		form := CreatePostData{}
 		renderPage(w, "create.html", form)
@@ -220,14 +275,48 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 				renderPage(w, "create.html", "Failed to update list of published posts!")
 				return
 			}
-			mutex.Lock()
+			postsMutex.Lock()
 			posts = availablePosts
-			mutex.Unlock()
+			postsMutex.Unlock()
 		}
 		renderPage(w, "create.html", form)
 		return
 	}
 	renderPage(w, "error.html", "Page not found!")
+	return
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		err := r.ParseForm()
+		if err != nil {
+			renderPage(w, "login.html", "Login failed!")
+			return
+		}
+		password := r.PostFormValue("password")
+		res := calcHash(password, blogConfig.Salt[:])
+		if res != blogConfig.Hash {
+			renderPage(w, "login.html", "Login failed!")
+			return
+		}
+		randbytes := make([]byte, 4)
+		_, err = rand.Read(randbytes)
+		if err != nil {
+			log.Println("couldn't read cryptographically secure rand, session aborted")
+			renderPage(w, "login.html", "Login failed!")
+			return
+		}
+		session := binary.BigEndian.Uint32(randbytes)
+		sessionsMutex.Lock()
+		sessions[session] = time.Now()
+		sessionsMutex.Unlock()
+		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: strconv.FormatUint(uint64(session), 10), Path: "/"})
+		fmt.Println(sessions)
+		renderPage(w, "login.html", "Login succeeded!")
+		return
+	}
+
+	renderPage(w, "login.html", nil) 
 	return
 }
 
