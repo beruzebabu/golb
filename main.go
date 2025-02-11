@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"flag"
@@ -18,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -58,7 +56,7 @@ const TITLE string = "Microblog"
 
 var templates *template.Template = template.Must(template.ParseGlob("templates/*.html"))
 var posts map[string]bool = map[string]bool{}
-var sessions map[uint32]time.Time = map[uint32]time.Time{}
+var sessions map[string]time.Time = map[string]time.Time{}
 var postsMutex sync.Mutex
 var sessionsMutex sync.Mutex
 
@@ -92,8 +90,6 @@ func parseFlags() BlogConfiguration {
 
 func main() {
 	blogConfig = parseFlags()
-
-	fmt.Println(blogConfig)
 
 	availablePosts, err := updatePostsList()
 	if err != nil {
@@ -231,23 +227,16 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(hcookie.String())
-	cookieid, err := strconv.ParseUint(hcookie.Value, 10, 32)
-	if err != nil {
-		renderPage(w, "login.html", nil)
-		return
-	}
+	cookieid := hcookie.Value
 
 	sessionsMutex.Lock()
-	sess, ok := sessions[uint32(cookieid)]
+	_, ok := sessions[cookieid]
 	sessionsMutex.Unlock()
 
 	if !ok {
 		renderPage(w, "login.html", nil)
 		return
 	}
-
-	fmt.Println(sess)
 
 	if r.Method == "GET" {
 		form := CreatePostData{}
@@ -306,12 +295,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			renderPage(w, "login.html", "Login failed!")
 			return
 		}
-		session := binary.BigEndian.Uint32(randbytes)
+		session := calcHash(blogConfig.Hash, randbytes)
 		sessionsMutex.Lock()
 		sessions[session] = time.Now()
 		sessionsMutex.Unlock()
-		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: strconv.FormatUint(uint64(session), 10), Path: "/"})
-		fmt.Println(sessions)
+		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: session, Path: "/", Secure: true})
 		renderPage(w, "login.html", "Login succeeded!")
 		return
 	}
