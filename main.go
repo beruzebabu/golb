@@ -26,8 +26,8 @@ import (
 
 type BlogConfiguration struct {
 	Title string
-	Hash string
-	Salt [4]byte
+	Hash  string
+	Salt  [4]byte
 }
 
 type TemplateData struct {
@@ -221,17 +221,10 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
-	hcookie, err := r.Cookie("microblog_h")
+	ok, err := checkSession(r)
 	if err != nil {
-		renderPage(w, "login.html", nil)
-		return
+		log.Println(err)
 	}
-
-	cookieid := hcookie.Value
-
-	sessionsMutex.Lock()
-	_, ok := sessions[cookieid]
-	sessionsMutex.Unlock()
 
 	if !ok {
 		renderPage(w, "login.html", nil)
@@ -304,7 +297,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderPage(w, "login.html", nil) 
+	renderPage(w, "login.html", nil)
 	return
 }
 
@@ -365,4 +358,23 @@ func writePost(data CreatePostData) error {
 	}
 
 	return nil
+}
+
+func checkSession(r *http.Request) (bool, error) {
+	hcookie, err := r.Cookie("microblog_h")
+	if err != nil {
+		return false, errors.New("Couldn't find session cookie")
+	}
+
+	cookieid := hcookie.Value
+
+	sessionsMutex.Lock()
+	_, ok := sessions[cookieid]
+	sessionsMutex.Unlock()
+
+	if !ok {
+		return false, errors.New("Invalid session")
+	}
+
+	return true, nil
 }
