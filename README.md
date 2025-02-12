@@ -2,6 +2,8 @@
 
 Golb is a microblogging engine (written in Go) which leverages Markdown for content creation and storage. It's designed to be lightweight, efficient, and low-bandwidth, making it ideal for resource-constrained devices and fast page load times.
 
+#### Golb is not (yet) ready for production as I'm still working on the basics
+
 ## Key Features
 
 ### Markdown-Based Editing
