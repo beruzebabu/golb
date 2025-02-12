@@ -25,7 +25,8 @@ app .postsummary {
 }
 
 @media (max-width: 768px) {
-    html {
-        
+    app .postsummary {
+        display: flex;
+        flex-direction: column;
     }
 }
