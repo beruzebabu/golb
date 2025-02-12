@@ -45,19 +45,28 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 	return PostData{PostHeader: PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md")}, Text: template.HTML(markdown.String())}, nil
 }
 
-func writePost(data CreatePostData) error {
+func buildPost(data CreatePostData) ([]byte, error) {
 	var stringbuilder strings.Builder
 	stringbuilder.WriteString("### " + data.Title + "\n")
 	stringbuilder.WriteString("###### " + time.Now().Format(time.RFC1123) + "\n")
 	stringbuilder.WriteString("---\n")
 	stringbuilder.WriteString(data.Text)
 
-	filename := url.QueryEscape(strings.ToLower(data.Title)) + ".md"
+	return []byte(stringbuilder.String()), nil
+}
 
-	err := os.WriteFile("posts/"+filename, []byte(stringbuilder.String()), 0700)
+func writePost(data CreatePostData) (string, error) {
+	post, err := buildPost(data)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	filename := url.QueryEscape(strings.ToLower(data.Title)) + ".md"
+
+	err = os.WriteFile("posts/"+filename, post, 0700)
+	if err != nil {
+		return "", err
+	}
+
+	return filename, nil
 }

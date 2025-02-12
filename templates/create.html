@@ -3,7 +3,7 @@
     <input type="text" id="title" name="title" required value="{{.Title}}">
 
     <label for="data">Post</label>
-    <textarea id="data" name="data" rows="12" required>{{.Text}}</textarea>
+    <textarea id="data" name="data" rows="24" required>{{.Text}}</textarea>
 
     <div class="checkbox-container">
         <input type="checkbox" id="publish" name="publish" {{if .Publish}}checked{{end}}>
@@ -12,5 +12,4 @@
 
     <input type="submit" value="Submit">
 </form>
-
-<code>{{.}}</code>
+<div id="preview">{{.HTMLMessage}}</div>

@@ -14,9 +14,10 @@ type TemplateData struct {
 }
 
 type CreatePostData struct {
-	Title   string
-	Text    string
-	Publish bool
+	Title       string
+	Text        string
+	Publish     bool
+	HTMLMessage template.HTML
 }
 
 type PostHeader struct {

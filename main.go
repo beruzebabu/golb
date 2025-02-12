@@ -190,35 +190,55 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	form := CreatePostData{}
 	if r.Method == "GET" {
-		form := CreatePostData{}
 		renderPage(w, "create.html", form)
 		return
 	} else if r.Method == "POST" {
 		err := r.ParseForm()
 		if err != nil {
 			log.Println(err)
-			renderPage(w, "create.html", "Failed to parse data!")
+			form.HTMLMessage = "Failed to parse data!"
+			renderPage(w, "create.html", form)
 			return
 		}
 		publish := r.PostFormValue("publish") != ""
 		form := CreatePostData{Title: r.PostFormValue("title"), Text: r.PostFormValue("data"), Publish: publish}
 		if publish {
-			err = writePost(form)
+			filename, err := writePost(form)
 			if err != nil {
 				log.Println(err)
-				renderPage(w, "create.html", "Failed publish post!")
+				form.HTMLMessage = "Failed publish post!"
+				renderPage(w, "create.html", form)
 				return
 			}
+			form.HTMLMessage = template.HTML("Published to file " + filename)
 			availablePosts, err := updatePostsList()
 			if err != nil {
 				log.Println(err)
-				renderPage(w, "create.html", "Failed to update list of published posts!")
+				form.HTMLMessage = "Failed to update list of published posts!"
+				renderPage(w, "create.html", form)
 				return
 			}
 			postsMutex.Lock()
 			posts = availablePosts
 			postsMutex.Unlock()
+		} else {
+			post, err := buildPost(form)
+			if err != nil {
+				log.Println(err)
+				form.HTMLMessage = "Failed to generate preview!"
+				renderPage(w, "create.html", form)
+				return
+			}
+			postdata, err := parsePost(post, "")
+			if err != nil {
+				log.Println(err)
+				form.HTMLMessage = "Failed to generate preview!"
+				renderPage(w, "create.html", form)
+				return
+			}
+			form.HTMLMessage = postdata.Text
 		}
 		renderPage(w, "create.html", form)
 		return
