@@ -18,7 +18,7 @@ func calcHash(text string, seed []byte) string {
 func checkSession(r *http.Request) (bool, error) {
 	hcookie, err := r.Cookie("microblog_h")
 	if err != nil {
-		return false, errors.New("Couldn't find session cookie")
+		return false, errors.New("couldn't find session cookie")
 	}
 
 	cookieid := hcookie.Value
@@ -28,7 +28,7 @@ func checkSession(r *http.Request) (bool, error) {
 	sessionsMutex.Unlock()
 
 	if !ok {
-		return false, errors.New("Invalid session")
+		return false, errors.New("invalid session")
 	}
 
 	return true, nil

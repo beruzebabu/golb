@@ -182,7 +182,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	ok, err := checkSession(r)
 	if err != nil {
-		log.Println(err)
+		log.Println(err, " ", r.RemoteAddr)
 	}
 
 	if !ok {
@@ -231,12 +231,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		err := r.ParseForm()
 		if err != nil {
+			log.Println("login failed for ", r.RemoteAddr, " due to invalid form data")
 			renderPage(w, "login.html", "Login failed!")
 			return
 		}
 		password := r.PostFormValue("password")
 		res := calcHash(password, blogConfig.Salt[:])
 		if res != blogConfig.Hash {
+			log.Println("login failed for ", r.RemoteAddr, " due to invalid password")
 			renderPage(w, "login.html", "Login failed!")
 			return
 		}
@@ -252,6 +254,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		sessions[session] = time.Now()
 		sessionsMutex.Unlock()
 		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: session, Path: "/", Secure: true})
+		log.Println("login succeeded for ", r.RemoteAddr)
 		renderPage(w, "login.html", "Login succeeded!")
 		return
 	}
