@@ -27,22 +27,16 @@ func parsePostHeader(filebytes []byte, postId string) (PostHeader, error) {
 }
 
 func parsePost(filebytes []byte, postId string) (PostData, error) {
-	rstring := strings.ReplaceAll(string(filebytes), "\r", "")
-	splitstrings := strings.Split(rstring, "\n")
-	index := slices.Index(splitstrings, "---")
-	if index == -1 || len(splitstrings) < 2 || index >= len(splitstrings) {
-		return PostData{}, errors.New("Invalid post format, cannot parse post")
-	}
-	var timestamp string
-	if index >= 2 {
-		timestamp = strings.TrimPrefix(splitstrings[1], "###### ")
-	}
-	var markdown strings.Builder
-	err := goldmark.Convert([]byte(strings.Join(splitstrings, "\n")), &markdown)
+	header, err := parsePostHeader(filebytes, postId)
 	if err != nil {
 		return PostData{}, err
 	}
-	return PostData{PostHeader: PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md")}, Text: template.HTML(markdown.String())}, nil
+	var markdown strings.Builder
+	err = goldmark.Convert(filebytes, &markdown)
+	if err != nil {
+		return PostData{}, err
+	}
+	return PostData{PostHeader: header, Text: template.HTML(markdown.String())}, nil
 }
 
 func buildPost(data CreatePostData) ([]byte, error) {
