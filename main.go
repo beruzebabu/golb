@@ -76,7 +76,6 @@ func updatePostsList() (map[string]bool, error) {
 	var availablePosts map[string]bool = map[string]bool{}
 	postlist, err := filepath.Glob("posts/*.md")
 	if err != nil {
-		log.Println(err)
 		return map[string]bool{}, err
 	}
 
@@ -89,14 +88,9 @@ func updatePostsList() (map[string]bool, error) {
 func refreshPosts(sleepseconds int) {
 	for {
 		time.Sleep(time.Duration(sleepseconds) * time.Second)
-		var availablePosts map[string]bool = map[string]bool{}
-		postlist, err := filepath.Glob("posts/*.md")
+		availablePosts, err := updatePostsList()
 		if err != nil {
 			log.Println(err)
-		}
-
-		for _, post := range postlist {
-			availablePosts[filepath.Base(post)] = true
 		}
 		postsMutex.Lock()
 		posts = availablePosts
