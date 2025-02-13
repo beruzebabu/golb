@@ -22,11 +22,11 @@ app .checkbox-container label, app .checkbox-container input {
 app .postsummary {
     display: flex;
     justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+    font-size: 1.3em;
 }
 
-@media (max-width: 768px) {
-    app .postsummary {
-        display: flex;
-        flex-direction: column;
-    }
+app .post h3:first-of-type {
+    margin-top: 0.2em;
 }

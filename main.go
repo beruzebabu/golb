@@ -146,7 +146,10 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		return btime.Compare(atime)
 	})
 
-	renderPage(w, "index.html", postsheaders)
+	sess, _ := checkSession(r)
+	parameters := PageParameters[[]PostHeader]{PageData: postsheaders, HasSession: sess}
+
+	renderPage(w, "index.html", parameters)
 }
 
 func postsHandler(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +185,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !ok {
-		renderPage(w, "login.html", nil)
+		http.Redirect(w, r, "login", 307)
 		return
 	}
 
@@ -269,7 +272,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		sessionsMutex.Lock()
 		sessions[session] = time.Now()
 		sessionsMutex.Unlock()
-		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: session, Path: "/", Secure: true})
+		http.SetCookie(w, &http.Cookie{Name: "microblog_h", Value: session, Path: "/", Secure: true, MaxAge: 3600})
 		log.Println("login succeeded for ", r.RemoteAddr)
 		renderPage(w, "login.html", "Login succeeded!")
 		return

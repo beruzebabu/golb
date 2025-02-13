@@ -1,5 +1,5 @@
-{{range .}}
-	<div class="postsummary"><a href="posts/{{.URL}}">{{.Title}}</a><i>{{.Timestamp}}</i></div>
+{{range .PageData}}
+	<div class="postsummary"><div><a href="/posts/{{.URL}}">{{.Title}}</a>{{if $.HasSession}}<a title="edit" href="/edit/{{.URL}}"><sup>&#9998;</sup></a>{{end}}</div><sup><i>{{.Timestamp}}</i></sup></div>
 {{else}}
 	<div class="postsummary">There are no posts...</div>
 {{end}}

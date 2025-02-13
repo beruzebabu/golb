@@ -31,3 +31,8 @@ type PostData struct {
 	PostHeader
 	Text template.HTML
 }
+
+type PageParameters[T any] struct {
+	PageData   T
+	HasSession bool
+}
