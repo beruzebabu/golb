@@ -25,11 +25,12 @@ var sessions map[string]time.Time = map[string]time.Time{}
 var postsMutex sync.Mutex
 var sessionsMutex sync.Mutex
 
-var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE}
+var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE, Port: 8080}
 
 func parseFlags() BlogConfiguration {
 	title := flag.String("title", TITLE, "specifies the blog title")
 	password := flag.String("password", "", "specifies the management password")
+	port := flag.Int("port", 8080, "specifies the port to use, default is 8080")
 	flag.Parse()
 
 	if *password == "" {
@@ -43,7 +44,7 @@ func parseFlags() BlogConfiguration {
 	}
 	hashed := calcHash(*password, randbytes)
 
-	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes)}
+	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port}
 }
 
 func main() {
@@ -64,10 +65,11 @@ func main() {
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
 	http.HandleFunc("/login", loginHandler)
-	fmt.Println("Server running on http://localhost:8080")
 	go refreshPosts(30)
 	go expireSessions(60)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	hostname := fmt.Sprintf(":%v", blogConfig.Port)
+	fmt.Println("Server running on ", hostname)
+	log.Fatal(http.ListenAndServe(hostname, nil))
 }
 
 func updatePostsList() (map[string]bool, error) {

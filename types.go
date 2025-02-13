@@ -6,6 +6,7 @@ type BlogConfiguration struct {
 	Title string
 	Hash  string
 	Salt  [4]byte
+	Port int
 }
 
 type TemplateData struct {
