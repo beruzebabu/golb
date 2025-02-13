@@ -22,7 +22,7 @@ Hello, world!`)
 		t.Fatal("Parsing valid post should succeed")
 	}
 
-		filebytes = []byte(`### hello
+	filebytes = []byte(`### hello
 ---
 Hello, world!`)
 	postheader, err = parsePostHeader(filebytes, "test")
@@ -64,5 +64,19 @@ Hello, world!`)
 
 	if err != nil || post.Title != "hello" || post.Timestamp != "Wed, 05 Feb 2025 17:54:14 CET" || post.URL != "test" || post.Text != template.HTML(filehtml) {
 		t.Fatal("Parsing valid post should succeed")
+	}
+}
+
+func TestBuildPost(t *testing.T) {
+	cpostdata := CreatePostData{}
+	_, err := buildPost(cpostdata)
+	if err == nil {
+		t.Fatal("Building post from empty post data should fail")
+	}
+
+	cpostdata = CreatePostData{Title: "Test", Text: "Also a test", Publish: false}
+	_, err = buildPost(cpostdata)
+	if err != nil {
+		t.Fatal("Building post from valid post data should succeed")
 	}
 }

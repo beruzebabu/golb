@@ -40,6 +40,11 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 }
 
 func buildPost(data CreatePostData) ([]byte, error) {
+	empty := CreatePostData{}
+	if data == empty {
+		return nil, errors.New("Post can't be empty")
+	}
+
 	var stringbuilder strings.Builder
 	stringbuilder.WriteString("### " + data.Title + "\n")
 	stringbuilder.WriteString("###### " + time.Now().Format(time.RFC1123) + "\n")
