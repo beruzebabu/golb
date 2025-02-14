@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -64,6 +65,7 @@ func main() {
 	http.HandleFunc("/posts", homeHandler)
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
+	http.HandleFunc("/create/{postId}", editPostHandler)
 	http.HandleFunc("/login", loginHandler)
 	go refreshPosts(30)
 	go expireSessions(60)
@@ -175,7 +177,10 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderPage(w, "post.html", postdata)
+	sess, _ := checkSession(r)
+	parameters := PageParameters[PostData]{PageData: postdata, HasSession: sess}
+
+	renderPage(w, "post.html", parameters)
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
@@ -239,6 +244,44 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			form.HTMLMessage = postdata.Text
 		}
+		renderPage(w, "create.html", form)
+		return
+	}
+	renderPage(w, "error.html", "Page not found!")
+	return
+}
+
+func editPostHandler(w http.ResponseWriter, r *http.Request) {
+	ok, err := checkSession(r)
+	if err != nil {
+		log.Println(err, " ", r.RemoteAddr)
+	}
+
+	if !ok {
+		http.Redirect(w, r, "/login", 307)
+		return
+	}
+
+	if r.Method == "GET" {
+		postId := r.PathValue("postId")
+		postId = fmt.Sprintf("%v.md", postId)
+
+		md, err := os.ReadFile("posts/" + postId)
+		if err != nil {
+			log.Println(err, postId)
+			renderPage(w, "error.html", "Post not found!")
+			return
+		}
+
+		post, err := parsePost(md, strings.TrimSuffix(postId, ".md"))
+		if err != nil {
+			log.Println(err, postId)
+			renderPage(w, "error.html", "Post not found!")
+			return
+		}
+		rstring := strings.ReplaceAll(string(md), "\r", "")
+		splitstrings := strings.Split(rstring, "\n")
+		form := CreatePostData{Title: post.Title, Text: strings.Join(splitstrings[post.ContentIndex:], "\n"), Publish: true, HTMLMessage: post.Text}
 		renderPage(w, "create.html", form)
 		return
 	}

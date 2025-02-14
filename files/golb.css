@@ -8,6 +8,12 @@ app {
     flex-grow: 1;
 }
 
+app .edit {
+    display: inline-block;
+    transform: scaleX(-1);
+    float: right;
+}
+
 app .checkbox-container {
     display: flex;
     flex-direction: row-reverse;
@@ -27,6 +33,16 @@ app .postsummary {
     font-size: 1.3em;
 }
 
+app .postsummary .title {
+    display: flex;
+    justify-content: space-between;
+}
+
 app .post h3:first-of-type {
     margin-top: 0.2em;
+}
+
+app form #title {
+    display: block;
+    width: 100%;
 }

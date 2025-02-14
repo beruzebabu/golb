@@ -23,7 +23,7 @@ func parsePostHeader(filebytes []byte, postId string) (PostHeader, error) {
 	if index >= 2 {
 		timestamp = strings.TrimPrefix(splitstrings[1], "###### ")
 	}
-	return PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md")}, nil
+	return PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md"), ContentIndex: index + 1}, nil
 }
 
 func parsePost(filebytes []byte, postId string) (PostData, error) {

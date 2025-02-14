@@ -18,7 +18,7 @@ func TestParsePostHeader(t *testing.T) {
 Hello, world!`)
 	postheader, err := parsePostHeader(filebytes, "test")
 
-	if err != nil || postheader.Title != "hello" || postheader.Timestamp != "Wed, 05 Feb 2025 17:54:14 CET" || postheader.URL != "test" {
+	if err != nil || postheader.Title != "hello" || postheader.Timestamp != "Wed, 05 Feb 2025 17:54:14 CET" || postheader.URL != "test" || postheader.ContentIndex != 3 {
 		t.Fatal("Parsing valid post should succeed")
 	}
 
@@ -27,7 +27,7 @@ Hello, world!`)
 Hello, world!`)
 	postheader, err = parsePostHeader(filebytes, "test")
 
-	if err != nil || postheader.Title != "hello" || postheader.Timestamp != "" || postheader.URL != "test" {
+	if err != nil || postheader.Title != "hello" || postheader.Timestamp != "" || postheader.URL != "test" || postheader.ContentIndex != 2 {
 		t.Fatal("Parsing valid post should succeed")
 	}
 }

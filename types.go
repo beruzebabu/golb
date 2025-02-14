@@ -22,9 +22,10 @@ type CreatePostData struct {
 }
 
 type PostHeader struct {
-	Title     string
-	Timestamp string
-	URL       string
+	Title        string
+	Timestamp    string
+	URL          string
+	ContentIndex int
 }
 
 type PostData struct {

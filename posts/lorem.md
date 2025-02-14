@@ -1,4 +1,5 @@
 ### lorem
+###### Fri, 14 Feb 2025 08:22:57 CET
 ---
 Lorem **ipsum** dolor sit amet, *consectetur* adipiscing elit. Nullam `euismod` turpis vel augue venenatis, quis sagittis nunc tincidunt. Sed **fringilla** metus at eros *pharetra*, eu lacinia velit __*pulvinar*__. Proin ~~strikethrough~~ text example.
 
