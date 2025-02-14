@@ -1,7 +1,5 @@
 package main
 
-import "html/template"
-
 type BlogConfiguration struct {
 	Title string
 	Hash  string
@@ -11,14 +9,14 @@ type BlogConfiguration struct {
 
 type TemplateData struct {
 	Title string
-	Page  template.HTML
+	Page  string
 }
 
 type CreatePostData struct {
 	Title       string
 	Text        string
 	Publish     bool
-	HTMLMessage template.HTML
+	HTMLMessage string
 }
 
 type PostHeader struct {
@@ -30,7 +28,7 @@ type PostHeader struct {
 
 type PostData struct {
 	PostHeader
-	Text template.HTML
+	Text string
 }
 
 type PageParameters[T any] struct {

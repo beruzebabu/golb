@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"html/template"
 	"net/url"
 	"os"
 	"slices"
@@ -50,7 +49,7 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 	if err != nil {
 		return PostData{}, err
 	}
-	return PostData{PostHeader: header, Text: template.HTML(markdown.String())}, nil
+	return PostData{PostHeader: header, Text: markdown.String()}, nil
 }
 
 func readPost(filename string) (PostData, error) {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"html/template"
 	"testing"
 )
 
@@ -62,7 +61,7 @@ Hello, world!`)
 
 	post, err = parsePost(filebytes, "test")
 
-	if err != nil || post.Title != "hello" || post.Timestamp != "Wed, 05 Feb 2025 17:54:14 CET" || post.URL != "test" || post.Text != template.HTML(filehtml) {
+	if err != nil || post.Title != "hello" || post.Timestamp != "Wed, 05 Feb 2025 17:54:14 CET" || post.URL != "test" || post.Text != filehtml {
 		t.Fatal("Parsing valid post should succeed")
 	}
 }

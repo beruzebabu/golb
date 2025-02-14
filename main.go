@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 )
 
@@ -198,7 +198,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 				renderPage(w, "create.html", form)
 				return
 			}
-			form.HTMLMessage = template.HTML("Published to file " + filename)
+			form.HTMLMessage = "Published to file " + filename
 			refreshPosts(0)
 		} else {
 			post, err := buildPost(form)
@@ -329,7 +329,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func renderPage(w http.ResponseWriter, tmpl string, data any) {
 	var buf *bytes.Buffer = bytes.NewBuffer([]byte{})
 	templates.ExecuteTemplate(buf, tmpl, data)
-	s := template.HTML(buf.Bytes())
+	s := string(buf.Bytes())
 	templatedata := TemplateData{Title: blogConfig.Title, Page: s}
 
 	templates.ExecuteTemplate(w, "_base.html", templatedata)
