@@ -26,6 +26,20 @@ func parsePostHeader(filebytes []byte, postId string) (PostHeader, error) {
 	return PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md"), ContentIndex: index + 1}, nil
 }
 
+func readPostHeader(filename string) (PostHeader, error) {
+	filebytes, err := os.ReadFile("posts/" + filename)
+	if err != nil {
+		return PostHeader{}, err
+	}
+
+	postheader, err := parsePostHeader(filebytes, filename)
+	if err != nil {
+		return PostHeader{}, err
+	}
+
+	return postheader, nil
+}
+
 func parsePost(filebytes []byte, postId string) (PostData, error) {
 	header, err := parsePostHeader(filebytes, postId)
 	if err != nil {
@@ -37,6 +51,20 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 		return PostData{}, err
 	}
 	return PostData{PostHeader: header, Text: template.HTML(markdown.String())}, nil
+}
+
+func readPost(filename string) (PostData, error) {
+	filebytes, err := os.ReadFile("posts/" + filename)
+	if err != nil {
+		return PostData{}, err
+	}
+
+	post, err := parsePost(filebytes, filename)
+	if err != nil {
+		return PostData{}, err
+	}
+
+	return post, nil
 }
 
 func buildPost(data CreatePostData) ([]byte, error) {
@@ -60,7 +88,7 @@ func writePost(data CreatePostData) (string, error) {
 		return "", err
 	}
 
-	filename := generateFilename(data.Title)
+	filename := generatePostFilename(data.Title)
 
 	err = os.WriteFile("posts/"+filename, post, 0700)
 	if err != nil {
@@ -70,6 +98,6 @@ func writePost(data CreatePostData) (string, error) {
 	return filename, nil
 }
 
-func generateFilename(title string) string {
+func generatePostFilename(title string) string {
 	return url.QueryEscape(strings.ToLower(title)) + ".md"
 }

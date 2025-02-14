@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ const TITLE string = "Golb"
 var templates *template.Template = template.Must(template.ParseGlob("templates/*.html"))
 var sessions map[string]time.Time = map[string]time.Time{}
 var postHeadersCache SyncCache[map[string]PostHeader] = SyncCache[map[string]PostHeader]{}
-var postsMutex sync.Mutex
+var sortedPostIndexCache SyncCache[[]PostHeader] = SyncCache[[]PostHeader]{}
 var sessionsMutex sync.Mutex
 
 var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE, Port: 8080}
@@ -53,6 +52,7 @@ func main() {
 	refreshPosts(0)
 
 	http.Handle("/files/", http.FileServer(http.Dir("")))
+	http.Handle("/favicon.ico", http.RedirectHandler("/files/favicon.ico", 301))
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/posts", homeHandler)
 	http.HandleFunc("/posts/{postId}", postsHandler)
@@ -67,51 +67,63 @@ func main() {
 	log.Fatal(http.ListenAndServe(hostname, nil))
 }
 
-func generatePostsSet() (map[string]bool, error) {
-	var availablePosts map[string]bool = map[string]bool{}
-	postlist, err := filepath.Glob("posts/*.md")
+func generatePostFilenamesList() ([]string, error) {
+	postpaths, err := filepath.Glob("posts/*.md")
 	if err != nil {
-		return map[string]bool{}, err
+		return []string{}, err
 	}
 
-	for _, post := range postlist {
-		availablePosts[filepath.Base(post)] = true
+	var postlist []string = []string{}
+	for _, path := range postpaths {
+		postlist = append(postlist, filepath.Base(path))
 	}
-	return availablePosts, nil
+
+	return postlist, nil
 }
 
-func generatePostHeaderCache() (map[string]PostHeader, error) {
+func generatePostHeaderCaches() (map[string]PostHeader, []PostHeader, error) {
 	var postsCache map[string]PostHeader = map[string]PostHeader{}
-	postsSet, err := generatePostsSet()
+	var postHeaders []PostHeader = []PostHeader{}
+	postsList, err := generatePostFilenamesList()
 	if err != nil {
 		log.Println(err)
-		return map[string]PostHeader{}, err
+		return map[string]PostHeader{}, []PostHeader{}, err
 	}
-	for name := range postsSet {
-		filebytes, err := os.ReadFile("posts/" + name)
+	for _, name := range postsList {
+		postheader, err := readPostHeader(name)
 		if err != nil {
-			log.Println(err, name)
-			return map[string]PostHeader{}, err
-		}
-
-		postheader, err := parsePostHeader(filebytes, name)
-		if err != nil {
-			log.Println(err, name)
-			return map[string]PostHeader{}, err
+			log.Println(err)
+			return map[string]PostHeader{}, []PostHeader{}, err
 		}
 
 		postsCache[name] = postheader
+		postHeaders = append(postHeaders, postheader)
 	}
-	return postsCache, nil
+	return postsCache, postHeaders, nil
 }
 
 func refreshPosts(sleepseconds int) {
 	for {
-		availablePosts, err := generatePostHeaderCache()
+		availablePosts, postHeaders, err := generatePostHeaderCaches()
 		if err != nil {
 			log.Println(err)
 			return
 		}
+
+		slices.SortStableFunc(postHeaders, func(a PostHeader, b PostHeader) int {
+			atime, err := time.Parse(time.RFC1123, a.Timestamp)
+			if err != nil {
+				return -1
+			}
+			btime, err := time.Parse(time.RFC1123, b.Timestamp)
+			if err != nil {
+				return 1
+			}
+
+			return btime.Compare(atime)
+		})
+
+		sortedPostIndexCache.Set(postHeaders)
 		postHeadersCache.Set(availablePosts)
 		if sleepseconds < 1 {
 			break
@@ -121,22 +133,9 @@ func refreshPosts(sleepseconds int) {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	postsheaders := slices.Collect(maps.Values[map[string]PostHeader](postHeadersCache.Get()))
-	slices.SortStableFunc(postsheaders, func(a PostHeader, b PostHeader) int {
-		atime, err := time.Parse(time.RFC1123, a.Timestamp)
-		if err != nil {
-			return -1
-		}
-		btime, err := time.Parse(time.RFC1123, b.Timestamp)
-		if err != nil {
-			return 1
-		}
-
-		return btime.Compare(atime)
-	})
-
+	postHeaders := sortedPostIndexCache.Get()
 	sess, _ := checkSession(r)
-	parameters := PageParameters[[]PostHeader]{PageData: postsheaders, HasSession: sess}
+	parameters := PageParameters[[]PostHeader]{PageData: postHeaders, HasSession: sess}
 
 	renderPage(w, "index.html", parameters)
 }
@@ -153,14 +152,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	md, err := os.ReadFile("posts/" + postId)
-	if err != nil {
-		log.Println(err, postId)
-		renderPage(w, "error.html", "Post not found!")
-		return
-	}
-
-	postdata, err := parsePost(md, postId)
+	postdata, err := readPost(postId)
 	if err != nil {
 		log.Println(err, postId)
 		renderPage(w, "error.html", "Something went wrong, please check back later!")
