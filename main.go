@@ -6,9 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io"
-	"io/fs"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,8 +20,8 @@ import (
 const TITLE string = "Golb"
 
 var templates *template.Template = template.Must(template.ParseGlob("templates/*.html"))
-var posts map[string]bool = map[string]bool{}
 var sessions map[string]time.Time = map[string]time.Time{}
+var postHeadersCache SyncCache[map[string]PostHeader] = SyncCache[map[string]PostHeader]{}
 var postsMutex sync.Mutex
 var sessionsMutex sync.Mutex
 
@@ -51,14 +50,7 @@ func parseFlags() BlogConfiguration {
 func main() {
 	blogConfig = parseFlags()
 
-	availablePosts, err := updatePostsList()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	postsMutex.Lock()
-	posts = availablePosts
-	postsMutex.Unlock()
+	refreshPosts(0)
 
 	http.Handle("/files/", http.FileServer(http.Dir("")))
 	http.HandleFunc("/", homeHandler)
@@ -75,7 +67,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(hostname, nil))
 }
 
-func updatePostsList() (map[string]bool, error) {
+func generatePostsSet() (map[string]bool, error) {
 	var availablePosts map[string]bool = map[string]bool{}
 	postlist, err := filepath.Glob("posts/*.md")
 	if err != nil {
@@ -88,54 +80,48 @@ func updatePostsList() (map[string]bool, error) {
 	return availablePosts, nil
 }
 
+func generatePostHeaderCache() (map[string]PostHeader, error) {
+	var postsCache map[string]PostHeader = map[string]PostHeader{}
+	postsSet, err := generatePostsSet()
+	if err != nil {
+		log.Println(err)
+		return map[string]PostHeader{}, err
+	}
+	for name := range postsSet {
+		filebytes, err := os.ReadFile("posts/" + name)
+		if err != nil {
+			log.Println(err, name)
+			return map[string]PostHeader{}, err
+		}
+
+		postheader, err := parsePostHeader(filebytes, name)
+		if err != nil {
+			log.Println(err, name)
+			return map[string]PostHeader{}, err
+		}
+
+		postsCache[name] = postheader
+	}
+	return postsCache, nil
+}
+
 func refreshPosts(sleepseconds int) {
 	for {
-		time.Sleep(time.Duration(sleepseconds) * time.Second)
-		availablePosts, err := updatePostsList()
+		availablePosts, err := generatePostHeaderCache()
 		if err != nil {
 			log.Println(err)
+			return
 		}
-		postsMutex.Lock()
-		posts = availablePosts
-		postsMutex.Unlock()
+		postHeadersCache.Set(availablePosts)
+		if sleepseconds < 1 {
+			break
+		}
+		time.Sleep(time.Duration(sleepseconds) * time.Second)
 	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	dfs := os.DirFS("posts")
-	postlist, err := fs.ReadDir(dfs, ".")
-	if err != nil {
-		log.Println(err)
-		renderPage(w, "error.html", "Something went wrong, please check back later!")
-		return
-	}
-
-	var postsheaders []PostHeader
-	for _, post := range postlist {
-		file, err := dfs.Open(post.Name())
-		defer file.Close()
-		if err != nil {
-			log.Println(err, post.Name())
-			renderPage(w, "error.html", "Something went wrong, please check back later!")
-			return
-		}
-
-		filebytes, err := io.ReadAll(file)
-		if err != nil {
-			log.Println(err, post.Name())
-			renderPage(w, "error.html", "Something went wrong, please check back later!")
-			return
-		}
-
-		postheader, err := parsePostHeader(filebytes, post.Name())
-		if err != nil {
-			log.Println(err, post.Name())
-			renderPage(w, "error.html", "Something went wrong, please check back later!")
-			return
-		}
-		postsheaders = append(postsheaders, postheader)
-	}
-
+	postsheaders := slices.Collect(maps.Values[map[string]PostHeader](postHeadersCache.Get()))
 	slices.SortStableFunc(postsheaders, func(a PostHeader, b PostHeader) int {
 		atime, err := time.Parse(time.RFC1123, a.Timestamp)
 		if err != nil {
@@ -159,7 +145,10 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 	postId := r.PathValue("postId")
 	postId = fmt.Sprintf("%v.md", postId)
 
-	if !posts[postId] {
+	posts := postHeadersCache.Get()
+	_, ok := posts[postId]
+
+	if !ok {
 		renderPage(w, "error.html", "Post not found!")
 		return
 	}
@@ -218,16 +207,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			form.HTMLMessage = template.HTML("Published to file " + filename)
-			availablePosts, err := updatePostsList()
-			if err != nil {
-				log.Println(err)
-				form.HTMLMessage = "Failed to update list of published posts!"
-				renderPage(w, "create.html", form)
-				return
-			}
-			postsMutex.Lock()
-			posts = availablePosts
-			postsMutex.Unlock()
+			refreshPosts(0)
 		} else {
 			post, err := buildPost(form)
 			if err != nil {
@@ -310,7 +290,7 @@ func deletePostHandler(w http.ResponseWriter, r *http.Request) {
 			renderPage(w, "delete.html", "Deleting post failed: "+err.Error())
 			return
 		}
-		w.WriteHeader(204)
+		w.WriteHeader(200)
 		renderPage(w, "delete.html", "Post "+postId+" deleted!")
 		return
 	}
