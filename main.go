@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -27,13 +28,32 @@ var sessionsMutex sync.Mutex
 var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE, Port: 8080}
 
 func parseFlags() BlogConfiguration {
-	title := flag.String("title", TITLE, "specifies the blog title")
+	title := flag.String("title", "", "specifies the blog title")
 	password := flag.String("password", "", "specifies the management password")
 	port := flag.Int("port", 8080, "specifies the port to use, default is 8080")
 	flag.Parse()
 
-	if *password == "" {
+	titleEnv := os.Getenv("GOLB_TITLE")
+	passwordEnv := os.Getenv("GOLB_PASSWORD")
+	portEnv := os.Getenv("GOLB_PORT")
+
+	if *title == "" && titleEnv != "" {
+		*title = titleEnv
+	} else {
+		*title = TITLE
+	}
+
+	if *password == "" && passwordEnv != "" {
+		*password = passwordEnv
+	} else {
 		log.Fatal("management password is required")
+	}
+
+	if *port == 8080 && portEnv != "" {
+		parsedPortEnv, err := strconv.Atoi(portEnv)
+		if err == nil {
+			*port = parsedPortEnv
+		}
 	}
 
 	randbytes := make([]byte, 4)
