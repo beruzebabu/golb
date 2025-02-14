@@ -60,7 +60,7 @@ func writePost(data CreatePostData) (string, error) {
 		return "", err
 	}
 
-	filename := url.QueryEscape(strings.ToLower(data.Title)) + ".md"
+	filename := generateFilename(data.Title)
 
 	err = os.WriteFile("posts/"+filename, post, 0700)
 	if err != nil {
@@ -68,4 +68,8 @@ func writePost(data CreatePostData) (string, error) {
 	}
 
 	return filename, nil
+}
+
+func generateFilename(title string) string {
+	return url.QueryEscape(strings.ToLower(title)) + ".md"
 }

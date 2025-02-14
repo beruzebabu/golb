@@ -66,6 +66,7 @@ func main() {
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
 	http.HandleFunc("/create/{postId}", editPostHandler)
+	http.HandleFunc("/delete/{postId}", deletePostHandler)
 	http.HandleFunc("/login", loginHandler)
 	go refreshPosts(30)
 	go expireSessions(60)
@@ -283,6 +284,34 @@ func editPostHandler(w http.ResponseWriter, r *http.Request) {
 		splitstrings := strings.Split(rstring, "\n")
 		form := CreatePostData{Title: post.Title, Text: strings.Join(splitstrings[post.ContentIndex:], "\n"), Publish: true, HTMLMessage: post.Text}
 		renderPage(w, "create.html", form)
+		return
+	}
+	renderPage(w, "error.html", "Page not found!")
+	return
+}
+
+func deletePostHandler(w http.ResponseWriter, r *http.Request) {
+	ok, err := checkSession(r)
+	if err != nil {
+		log.Println(err, " ", r.RemoteAddr)
+	}
+
+	if !ok {
+		renderPage(w, "error.html", "Page not found!")
+		return
+	}
+	if r.Method == "DELETE" || r.Method == "GET" {
+		postId := r.PathValue("postId")
+		postId = fmt.Sprintf("%v.md", postId)
+
+		err := os.Remove("posts/" + postId)
+		if err != nil {
+			w.WriteHeader(404)
+			renderPage(w, "delete.html", "Deleting post failed: "+err.Error())
+			return
+		}
+		w.WriteHeader(204)
+		renderPage(w, "delete.html", "Post "+postId+" deleted!")
 		return
 	}
 	renderPage(w, "error.html", "Page not found!")

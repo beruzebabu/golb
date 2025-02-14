@@ -1,1 +1,1 @@
-{{if $.HasSession}}<a title="edit" href="/create/{{.PageData.URL}}" class="edit">&#9998;</a>{{end}}<div class="post">{{.PageData.Text}}</div>
+{{if $.HasSession}}<a title="edit" href="/create/{{.PageData.URL}}" class="edit">&#9998;</a><a title="delete" href="/delete/{{.PageData.URL}}" class="edit">&#10008;</a>{{end}}<div class="post">{{.PageData.Text}}</div>
