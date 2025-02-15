@@ -35,8 +35,14 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+    - name: Upload executable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: golb-linux-amd64
+        path: golb
+
     - name: Build
-      run: docker build -f Dockerfile . -t beruzebabu/golb:latest --output ./out
+      run: docker build -f Dockerfile . -t beruzebabu/golb:latest --output .
 
     - run: ls -la
 
