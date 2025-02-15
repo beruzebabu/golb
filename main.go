@@ -45,7 +45,7 @@ func parseFlags() BlogConfiguration {
 
 	if *password == "" && passwordEnv != "" {
 		*password = passwordEnv
-	} else {
+	} else if *password == "" {
 		log.Fatal("management password is required")
 	}
 
