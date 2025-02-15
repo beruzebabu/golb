@@ -40,3 +40,11 @@ jobs:
       with:
         push: false
         tags: beruzebabu/golb:latest
+
+    - run: ls -la
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-artifact
+        path: path/to/artifact/world.txt
