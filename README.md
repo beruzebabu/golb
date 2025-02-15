@@ -29,4 +29,4 @@ The engine is optimized for low resource usage:
 - **Low Bandwidth**: Posts are rendered in pure HTML and (minified) CSS, the base does not use any JS, custom fonts or other dependencies.
 - **Fast Rendering**: Go's performance combined with the output being just static HTML and CSS results in (very) quick page load times.
 - **Extensibility**: The page and post rendering uses Go's template system, which means the HTML pages and CSS are fully customizable. Custom CSS, JS modules and new HTML sections can be added at will.
-- **Minimal Dependencies**: Utilizes Go's standard library for core functionality.
+- **Minimal Dependencies**: Utilizes Go's standard library for core functionality. Has just 1 dependency, goldmark (for markdown processing).
