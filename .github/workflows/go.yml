@@ -42,14 +42,14 @@ jobs:
         path: golb
 
     - name: Build
-      run: docker build -f Dockerfile . -t beruzebabu/golb:latest --output .
+      run: docker build -f Dockerfile . -t beruzebabu/golb:latest --output type=docker,dest=./golb.tar
 
     - run: ls -la
 
     - run: ls -la /out
 
-    - name: Upload artifact
+    - name: Upload docker artifact
       uses: actions/upload-artifact@v4
       with:
-        name: my-artifact
-        path: path/to/artifact/world.txt
+        name: golb-docker
+        path: golb.tar
