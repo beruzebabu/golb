@@ -40,8 +40,11 @@ jobs:
       with:
         push: false
         tags: beruzebabu/golb:latest
+        output: /out
 
     - run: ls -la
+    
+    - run: ls -la /out
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
