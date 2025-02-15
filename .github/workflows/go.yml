@@ -40,10 +40,10 @@ jobs:
       with:
         push: false
         tags: beruzebabu/golb:latest
-        output: /out
+        outputs: -type=local,dest=/out
 
     - run: ls -la
-    
+
     - run: ls -la /out
 
     - name: Upload artifact
