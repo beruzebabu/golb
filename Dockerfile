@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.24 as build
+FROM golang:1.24 AS build
 
 WORKDIR /build
 
@@ -12,7 +12,7 @@ COPY /templates/*.* ./templates/
 RUN CGO_ENABLED=0 GOOS=linux go build -o golb
 
 
-FROM alpine:3.21 as app
+FROM alpine:3.21 AS app
 
 WORKDIR /app
 

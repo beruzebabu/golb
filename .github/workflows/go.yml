@@ -38,7 +38,7 @@ jobs:
     - name: Upload executable artifact
       uses: actions/upload-artifact@v4
       with:
-        name: golb-linux-amd64-${GITHUB_RUN_ID}
+        name: golb-linux-amd64-${{ github.run_id }}
         path: golb
 
     - name: Set up QEMU
@@ -48,13 +48,13 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build
-      run: docker buildx build -f Dockerfile . -t beruzebabu/golb --label "runnumber=${GITHUB_RUN_ID}" --output type=docker,dest=./golb.tar 
+      run: docker buildx build -f Dockerfile . -t beruzebabu/golb --label "runnumber=${{ github.run_id }}" --output type=docker,dest=./golb.tar 
 
     - name: Upload docker artifact
       uses: actions/upload-artifact@v4
       with:
         name: golb-docker
-        path: "golb-${GITHUB_RUN_ID}.tar"
+        path: golb-${{ github.run_id }}.tar
 
     - name: Load image
       run: docker load -i ./golb.tar
