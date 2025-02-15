@@ -9,7 +9,7 @@ import (
 func TestCalcHash(t *testing.T) {
 	input := "test"
 	salt := []byte{144, 134, 195, 91}
-	hash := calcHash(input, salt)
+	hash, _ := calcHash(input, salt)
 	if hash != "b0e292b2e7822a4cde578f5b10456dab1420820eb74f62e230e30b03f9fd6db1" {
 		t.Fatalf("Hash calculation does not match expected hash %v != %v", hash, "b0e292b2e7822a4cde578f5b10456dab1420820eb74f62e230e30b03f9fd6db1")
 	}
@@ -18,7 +18,7 @@ func TestCalcHash(t *testing.T) {
 func TestCalcHashEmpty(t *testing.T) {
 	input := ""
 	salt := []byte{144, 134, 195, 91}
-	hash := calcHash(input, salt)
+	hash, _ := calcHash(input, salt)
 	if hash == "" {
 		t.Fatal("Hash calculation does not work correctly when supplying empty input")
 	}

@@ -1,10 +1,11 @@
 package main
 
 type BlogConfiguration struct {
-	Title string
-	Hash  string
-	Salt  [4]byte
-	Port  int
+	Title   string
+	Hash    string
+	Salt    [4]byte
+	Port    int
+	PostDir string
 }
 
 type TemplateData struct {

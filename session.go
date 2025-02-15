@@ -8,11 +8,15 @@ import (
 	"time"
 )
 
-func calcHash(text string, seed []byte) string {
+func calcHash(text string, seed []byte) (string, error) {
+	if len(text) > 4096 {
+		return "", errors.New("input text too long")
+	}
+
 	h := crypto.SHA256.New()
 	h.Write(seed)
 	h.Write([]byte(text + TITLE))
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func checkSession(r *http.Request) (bool, error) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -25,8 +26,8 @@ func parsePostHeader(filebytes []byte, postId string) (PostHeader, error) {
 	return PostHeader{Title: strings.TrimPrefix(splitstrings[0], "### "), Timestamp: timestamp, URL: strings.TrimSuffix(postId, ".md"), ContentIndex: index + 1}, nil
 }
 
-func readPostHeader(filename string) (PostHeader, error) {
-	filebytes, err := os.ReadFile("posts/" + filename)
+func readPostHeader(filename string, postdir string) (PostHeader, error) {
+	filebytes, err := os.ReadFile(filepath.Join(postdir, filename))
 	if err != nil {
 		return PostHeader{}, err
 	}
@@ -52,8 +53,8 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 	return PostData{PostHeader: header, Text: markdown.String()}, nil
 }
 
-func readPost(filename string) (PostData, error) {
-	filebytes, err := os.ReadFile("posts/" + filename)
+func readPost(filename string, postdir string) (PostData, error) {
+	filebytes, err := os.ReadFile(filepath.Join(postdir, filename))
 	if err != nil {
 		return PostData{}, err
 	}
@@ -68,7 +69,7 @@ func readPost(filename string) (PostData, error) {
 
 func buildPost(data CreatePostData) ([]byte, error) {
 	empty := CreatePostData{}
-	if data == empty {
+	if data == empty || data.Title == "" {
 		return nil, errors.New("Post can't be empty")
 	}
 
@@ -81,15 +82,19 @@ func buildPost(data CreatePostData) ([]byte, error) {
 	return []byte(stringbuilder.String()), nil
 }
 
-func writePost(data CreatePostData) (string, error) {
+func writePost(data CreatePostData, postdir string) (string, error) {
 	post, err := buildPost(data)
 	if err != nil {
 		return "", err
 	}
 
-	filename := generatePostFilename(data.Title)
+	filename := filepath.Join(postdir, generatePostFilename(data.Title))
 
-	err = os.WriteFile("posts/"+filename, post, 0700)
+	// no error handling here since we don't know if an error occured due to the file not being present, or an os level error
+	os.Remove(filename + ".old")
+	os.Rename(filename, filename+".old")
+
+	err = os.WriteFile(filename, post, 0700)
 	if err != nil {
 		return "", err
 	}

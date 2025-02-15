@@ -31,11 +31,13 @@ func parseFlags() BlogConfiguration {
 	title := flag.String("title", "", "specifies the blog title")
 	password := flag.String("password", "", "specifies the management password")
 	port := flag.Int("port", 8080, "specifies the port to use, default is 8080")
+	postDir := flag.String("postdir", "posts", "specifies the directory to use for posts")
 	flag.Parse()
 
 	titleEnv := os.Getenv("GOLB_TITLE")
 	passwordEnv := os.Getenv("GOLB_PASSWORD")
 	portEnv := os.Getenv("GOLB_PORT")
+	postEnv := os.Getenv("GOLB_POSTDIR")
 
 	if *title == "" && titleEnv != "" {
 		*title = titleEnv
@@ -56,14 +58,24 @@ func parseFlags() BlogConfiguration {
 		}
 	}
 
+	if *postDir == "" && postEnv != "" {
+		*postDir = filepath.Clean(postEnv)
+	} else {
+		*postDir = filepath.Clean(*postDir)
+	}
+
 	randbytes := make([]byte, 4)
 	_, err := rand.Read(randbytes)
 	if err != nil {
 		log.Fatal("couldn't read cryptographically secure rand")
 	}
-	hashed := calcHash(*password, randbytes)
 
-	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port}
+	hashed, err := calcHash(*password, randbytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir}
 }
 
 func main() {
@@ -88,7 +100,7 @@ func main() {
 }
 
 func generatePostFilenamesList() ([]string, error) {
-	postpaths, err := filepath.Glob("posts/*.md")
+	postpaths, err := filepath.Glob(filepath.Join(blogConfig.PostDir, "*.md"))
 	if err != nil {
 		return []string{}, err
 	}
@@ -110,7 +122,7 @@ func generatePostHeaderCaches() (map[string]PostHeader, []PostHeader, error) {
 		return map[string]PostHeader{}, []PostHeader{}, err
 	}
 	for _, name := range postsList {
-		postheader, err := readPostHeader(name)
+		postheader, err := readPostHeader(name, blogConfig.PostDir)
 		if err != nil {
 			log.Println(err)
 			return map[string]PostHeader{}, []PostHeader{}, err
@@ -172,7 +184,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postdata, err := readPost(postId)
+	postdata, err := readPost(postId, blogConfig.PostDir)
 	if err != nil {
 		log.Println(err, postId)
 		renderPage(w, "error.html", "Something went wrong, please check back later!")
@@ -211,7 +223,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 		publish := r.PostFormValue("publish") != ""
 		form := CreatePostData{Title: r.PostFormValue("title"), Text: r.PostFormValue("data"), Publish: publish}
 		if publish {
-			filename, err := writePost(form)
+			filename, err := writePost(form, blogConfig.PostDir)
 			if err != nil {
 				log.Println(err)
 				form.HTMLMessage = "Failed publish post!"
@@ -259,7 +271,7 @@ func editPostHandler(w http.ResponseWriter, r *http.Request) {
 		postId := r.PathValue("postId")
 		postId = fmt.Sprintf("%v.md", postId)
 
-		md, err := os.ReadFile("posts/" + postId)
+		md, err := os.ReadFile(filepath.Join(blogConfig.PostDir, postId))
 		if err != nil {
 			log.Println(err, postId)
 			renderPage(w, "error.html", "Post not found!")
@@ -296,7 +308,7 @@ func deletePostHandler(w http.ResponseWriter, r *http.Request) {
 		postId := r.PathValue("postId")
 		postId = fmt.Sprintf("%v.md", postId)
 
-		err := os.Remove("posts/" + postId)
+		err := os.Remove(filepath.Join(blogConfig.PostDir, postId))
 		if err != nil {
 			w.WriteHeader(404)
 			renderPage(w, "delete.html", "Deleting post failed: "+err.Error())
@@ -319,7 +331,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		password := r.PostFormValue("password")
-		res := calcHash(password, blogConfig.Salt[:])
+		res, err := calcHash(password, blogConfig.Salt[:])
+		if err != nil {
+			log.Println(err)
+			renderPage(w, "login.html", "Login failed!")
+			return
+		}
 		if res != blogConfig.Hash {
 			log.Println("login failed for ", r.RemoteAddr, " due to invalid password")
 			renderPage(w, "login.html", "Login failed!")
@@ -332,7 +349,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			renderPage(w, "login.html", "Login failed!")
 			return
 		}
-		session := calcHash(blogConfig.Hash, randbytes)
+		session, err := calcHash(blogConfig.Hash, randbytes)
+		if err != nil {
+			log.Println(err)
+			renderPage(w, "login.html", "Login failed!")
+			return
+		}
 		sessionsMutex.Lock()
 		sessions[session] = time.Now()
 		sessionsMutex.Unlock()
