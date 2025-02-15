@@ -40,7 +40,7 @@ jobs:
       with:
         push: false
         tags: beruzebabu/golb:latest
-        outputs: type=local,dest=/out
+        outputs: type=local,dest=./out
 
     - run: ls -la
 
