@@ -35,12 +35,8 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        push: false
-        tags: beruzebabu/golb:latest
-        outputs: type=local,dest=./out
+    - name: Build
+      run: docker build -f Dockerfile . -t beruzebabu/golb:latest
 
     - run: ls -la
 
