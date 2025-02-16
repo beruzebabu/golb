@@ -25,4 +25,4 @@ COPY --from=build /build/golb ./golb
 
 EXPOSE 8080
 
-ENTRYPOINT ["/golb"]
+ENTRYPOINT ["/app/golb"]
