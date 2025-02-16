@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -174,6 +175,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func postsHandler(w http.ResponseWriter, r *http.Request) {
 	postId := r.PathValue("postId")
+	postId = url.PathEscape(postId)
 	postId = fmt.Sprintf("%v.md", postId)
 
 	posts := postHeadersCache.Get()
@@ -269,6 +271,7 @@ func editPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" {
 		postId := r.PathValue("postId")
+		postId = url.PathEscape(postId)
 		postId = fmt.Sprintf("%v.md", postId)
 
 		md, err := os.ReadFile(filepath.Join(blogConfig.PostDir, postId))
@@ -306,14 +309,16 @@ func deletePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method == "DELETE" || r.Method == "GET" {
 		postId := r.PathValue("postId")
+		postId = url.PathEscape(postId)
 		postId = fmt.Sprintf("%v.md", postId)
 
-		err := os.Remove(filepath.Join(blogConfig.PostDir, postId))
+		err := deletePost(postId, blogConfig.PostDir)
 		if err != nil {
 			w.WriteHeader(404)
 			renderPage(w, "delete.html", "Deleting post failed: "+err.Error())
 			return
 		}
+		refreshPosts(0)
 		w.WriteHeader(200)
 		renderPage(w, "delete.html", "Post "+postId+" deleted!")
 		return

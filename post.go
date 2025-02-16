@@ -89,10 +89,7 @@ func writePost(data CreatePostData, postdir string) (string, error) {
 	}
 
 	filename := filepath.Join(postdir, generatePostFilename(data.Title))
-
-	// no error handling here since we don't know if an error occured due to the file not being present, or an os level error
-	os.Remove(filename + ".old")
-	os.Rename(filename, filename+".old")
+	deletePost(generatePostFilename(data.Title), postdir)
 
 	err = os.WriteFile(filename, post, 0700)
 	if err != nil {
@@ -102,6 +99,16 @@ func writePost(data CreatePostData, postdir string) (string, error) {
 	return filename, nil
 }
 
+func deletePost(postname string, postdir string) error {
+	filename := filepath.Join(postdir, postname)
+
+	// no error handling here since we don't know if an error occured due to the file not being present, or an os level error
+	os.Remove(filename + ".old")
+	os.Rename(filename, filename+".old")
+
+	return nil
+}
+
 func generatePostFilename(title string) string {
-	return url.QueryEscape(strings.ToLower(title)) + ".md"
+	return url.PathEscape(strings.ToLower(title)) + ".md"
 }
