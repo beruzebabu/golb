@@ -28,44 +28,42 @@ var sessionsMutex sync.Mutex
 var blogConfig BlogConfiguration = BlogConfiguration{Title: TITLE, Port: 8080}
 
 func parseFlags() BlogConfiguration {
-	title := flag.String("title", "", "specifies the blog title")
-	password := flag.String("password", "", "specifies the management password")
-	port := flag.Int("port", 8080, "specifies the port to use, default is 8080")
-	postDir := flag.String("postdir", "posts", "specifies the directory to use for posts")
-	flag.Parse()
-
 	titleEnv := os.Getenv("GOLB_TITLE")
 	passwordEnv := os.Getenv("GOLB_PASSWORD")
 	portEnv := os.Getenv("GOLB_PORT")
 	postEnv := os.Getenv("GOLB_POSTDIR")
 
-	if *title == "" && titleEnv != "" {
-		*title = titleEnv
-	} else {
-		*title = TITLE
+	if titleEnv == "" {
+		titleEnv = TITLE
 	}
 
-	if *password == "" && passwordEnv != "" {
-		*password = passwordEnv
-	} else if *password == "" {
+	if portEnv == "" {
+		portEnv = "8080"
+	}
+
+	if postEnv == "" {
+		postEnv = "posts"
+	}
+
+	defPort, err := strconv.Atoi(portEnv)
+	if err != nil {
+		defPort = 8080
+	}
+
+	title := flag.String("title", titleEnv, "specifies the blog title")
+	password := flag.String("password", passwordEnv, "specifies the management password")
+	port := flag.Int("port", defPort, "specifies the port to use, default is 8080")
+	postDir := flag.String("postdir", postEnv, "specifies the directory to use for posts")
+	flag.Parse()
+
+	if *password == "" {
 		log.Fatal("management password is required")
 	}
 
-	if *port == 8080 && portEnv != "" {
-		parsedPortEnv, err := strconv.Atoi(portEnv)
-		if err == nil {
-			*port = parsedPortEnv
-		}
-	}
-
-	if *postDir == "" && postEnv != "" {
-		*postDir = filepath.Clean(postEnv)
-	} else {
-		*postDir = filepath.Clean(*postDir)
-	}
+	*postDir = filepath.Clean(*postDir)
 
 	randbytes := make([]byte, 4)
-	_, err := rand.Read(randbytes)
+	_, err = rand.Read(randbytes)
 	if err != nil {
 		log.Fatal("couldn't read cryptographically secure rand")
 	}
