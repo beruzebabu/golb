@@ -75,6 +75,8 @@ func parseFlags() BlogConfiguration {
 		log.Fatal(err)
 	}
 
+	log.Printf("parsed flags, title = %v, port = %v, postdir = %v", *title, *port, *postDir)
+
 	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir}
 }
 
