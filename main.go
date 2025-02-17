@@ -184,11 +184,17 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	end := (1 + page) * 10
 	nextPage := page + 1
-	if end > len(postHeaders) {
+	if end >= len(postHeaders) {
 		end = len(postHeaders)
 		nextPage = page
 	}
-	start := end - 10
+	start := page * 10
+	if start < 0 {
+		start = 0
+	} else if start >= end {
+		http.Redirect(w, r, "/", 307)
+		return
+	}
 
 	parameters := PageParameters[[]PostHeader]{PageData: postHeaders[start:end], HasSession: sess, CurrentPage: page, NextPage: nextPage, PreviousPage: prevPage}
 

@@ -7,11 +7,11 @@
 	<div class="postsummary">There are no posts...</div>
 {{end}}
 <div class="pagination">
-{{if eq .CurrentPage 0}}
+{{if and (eq .CurrentPage 0) (ne .CurrentPage .NextPage)}}
 	<a href="/page/{{.NextPage}}">older posts</a>
 {{else if eq .NextPage .CurrentPage}}
 	<a href="/page/{{.PreviousPage}}">newer posts</a>
-{{else}}
+{{else if and (ne .CurrentPage .NextPage) (ne .CurrentPage .PreviousPage)}}
 	<a href="/page/{{.PreviousPage}}">newer posts</a> | <a href="/page/{{.NextPage}}">older posts</a>
 {{end}}
 </div>
