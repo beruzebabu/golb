@@ -9,7 +9,7 @@
 <div class="pagination">
 {{if and (eq .CurrentPage 0) (ne .CurrentPage .NextPage)}}
 	<a href="/page/{{.NextPage}}">older posts</a>
-{{else if eq .NextPage .CurrentPage}}
+{{else if and (eq .CurrentPage .NextPage) (ne .CurrentPage .PreviousPage)}}
 	<a href="/page/{{.PreviousPage}}">newer posts</a>
 {{else if and (ne .CurrentPage .NextPage) (ne .CurrentPage .PreviousPage)}}
 	<a href="/page/{{.PreviousPage}}">newer posts</a> | <a href="/page/{{.NextPage}}">older posts</a>
