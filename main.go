@@ -87,6 +87,7 @@ func main() {
 	http.Handle("/files/", http.FileServer(http.Dir("")))
 	http.Handle("/favicon.ico", http.RedirectHandler("/files/favicon.ico", 301))
 	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/page/{pageIndex}", homeHandler)
 	http.HandleFunc("/posts", homeHandler)
 	http.HandleFunc("/posts/{postId}", postsHandler)
 	http.HandleFunc("/create", createPostHandler)
@@ -168,7 +169,28 @@ func refreshPosts(sleepseconds int) {
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	postHeaders := sortedPostIndexCache.Get()
 	sess, _ := checkSession(r)
-	parameters := PageParameters[[]PostHeader]{PageData: postHeaders, HasSession: sess}
+	page := 0
+	prevPage := 0
+
+	pageIndex := r.PathValue("pageIndex")
+
+	if pageIndex != "" && len(pageIndex) <= 8 {
+		conv, err := strconv.Atoi(pageIndex)
+		if err == nil && conv > 0 {
+			page = conv
+			prevPage = page - 1
+		}
+	}
+
+	end := (1 + page) * 10
+	nextPage := page + 1
+	if end > len(postHeaders) {
+		end = len(postHeaders)
+		nextPage = page
+	}
+	start := end - 10
+
+	parameters := PageParameters[[]PostHeader]{PageData: postHeaders[start:end], HasSession: sess, CurrentPage: page, NextPage: nextPage, PreviousPage: prevPage}
 
 	renderPage(w, "index.html", parameters)
 }

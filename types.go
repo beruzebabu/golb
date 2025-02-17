@@ -33,6 +33,9 @@ type PostData struct {
 }
 
 type PageParameters[T any] struct {
-	PageData   T
-	HasSession bool
+	PageData     T
+	HasSession   bool
+	CurrentPage  int
+	NextPage     int
+	PreviousPage int
 }

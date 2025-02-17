@@ -4,6 +4,12 @@ body {
     flex-direction: column;
 }
 
+header {
+    display: flex;
+    justify-content: center;
+    margin-top: -1em;
+}
+
 app {
     flex-grow: 1;
 }
@@ -36,6 +42,13 @@ app .postsummary {
 app .postsummary .title {
     display: flex;
     justify-content: space-between;
+}
+
+app .pagination {
+    display: flex;
+    justify-content: space-evenly;
+    margin-top: 2em;
+    margin-bottom: 1em;
 }
 
 app .post h3:first-of-type {
