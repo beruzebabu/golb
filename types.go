@@ -1,11 +1,19 @@
 package main
 
 type BlogConfiguration struct {
-	Title   string
-	Hash    string
-	Salt    [4]byte
-	Port    int
-	PostDir string
+	Title    string
+	Hash     string
+	Salt     [4]byte
+	Port     int
+	PostDir  string
+	ViewOnly bool
+}
+
+func (bc BlogConfiguration) isPasswordless() bool {
+	if bc.ViewOnly || bc.Hash == "" {
+		return true
+	}
+	return false
 }
 
 type TemplateData struct {

@@ -57,11 +57,14 @@ func parseFlags() BlogConfiguration {
 	postDir := flag.String("postdir", postEnv, "specifies the directory to use for posts")
 	flag.Parse()
 
-	if *password == "" {
-		log.Fatal("management password is required")
-	}
-
 	*postDir = filepath.Clean(*postDir)
+
+	log.Printf("parsed flags, title = %v, port = %v, postdir = %v", *title, *port, *postDir)
+
+	if *password == "" {
+		log.Println("no password supplied, running in view only mode")
+		return BlogConfiguration{Title: *title, Hash: "", Salt: [4]byte{}, Port: *port, PostDir: *postDir, ViewOnly: true}
+	}
 
 	randbytes := make([]byte, 4)
 	_, err = rand.Read(randbytes)
@@ -74,9 +77,7 @@ func parseFlags() BlogConfiguration {
 		log.Fatal(err)
 	}
 
-	log.Printf("parsed flags, title = %v, port = %v, postdir = %v", *title, *port, *postDir)
-
-	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir}
+	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir, ViewOnly: false}
 }
 
 func main() {
@@ -90,10 +91,14 @@ func main() {
 	http.HandleFunc("/page/{pageIndex}", homeHandler)
 	http.HandleFunc("/posts", homeHandler)
 	http.HandleFunc("/posts/{postId}", postsHandler)
-	http.HandleFunc("/create", createPostHandler)
-	http.HandleFunc("/create/{postId}", editPostHandler)
-	http.HandleFunc("/delete/{postId}", deletePostHandler)
-	http.HandleFunc("/login", loginHandler)
+
+	if !blogConfig.isPasswordless() {
+		http.HandleFunc("/login", loginHandler)
+		http.HandleFunc("/create", createPostHandler)
+		http.HandleFunc("/create/{postId}", editPostHandler)
+		http.HandleFunc("/delete/{postId}", deletePostHandler)
+	}
+
 	go refreshPosts(30)
 	go expireSessions(60)
 	hostname := fmt.Sprintf(":%v", blogConfig.Port)
@@ -168,7 +173,7 @@ func refreshPosts(sleepseconds int) {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	postHeaders := sortedPostIndexCache.Get()
-	sess, _ := checkSession(r)
+	sess, _ := checkSession(r, blogConfig)
 	page := 0
 	prevPage := 0
 
@@ -221,14 +226,14 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sess, _ := checkSession(r)
+	sess, _ := checkSession(r, blogConfig)
 	parameters := PageParameters[PostData]{PageData: postdata, HasSession: sess}
 
 	renderPage(w, "post.html", parameters)
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
-	ok, err := checkSession(r)
+	ok, err := checkSession(r, blogConfig)
 	if err != nil {
 		log.Println(err, " ", r.RemoteAddr)
 	}
@@ -287,7 +292,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func editPostHandler(w http.ResponseWriter, r *http.Request) {
-	ok, err := checkSession(r)
+	ok, err := checkSession(r, blogConfig)
 	if err != nil {
 		log.Println(err, " ", r.RemoteAddr)
 	}
@@ -326,7 +331,7 @@ func editPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deletePostHandler(w http.ResponseWriter, r *http.Request) {
-	ok, err := checkSession(r)
+	ok, err := checkSession(r, blogConfig)
 	if err != nil {
 		log.Println(err, " ", r.RemoteAddr)
 	}
@@ -356,6 +361,11 @@ func deletePostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+	if blogConfig.isPasswordless() {
+		renderPage(w, "error.html", "Page not found!")
+		return
+	}
+
 	if r.Method == "POST" {
 		err := r.ParseForm()
 		if err != nil {

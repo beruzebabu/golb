@@ -19,7 +19,11 @@ func calcHash(text string, seed []byte) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func checkSession(r *http.Request) (bool, error) {
+func checkSession(r *http.Request, bc BlogConfiguration) (bool, error) {
+	if bc.isPasswordless() {
+		return false, errors.New("session can't be valid in view only mode")
+	}
+
 	hcookie, err := r.Cookie("microblog_h")
 	if err != nil {
 		return false, errors.New("couldn't find session cookie")

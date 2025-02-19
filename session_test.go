@@ -42,7 +42,9 @@ func TestSessionCheck(t *testing.T) {
 		},
 	}
 
-	ok, err := checkSession(r)
+	blogConfig := BlogConfiguration{Hash: "filler", ViewOnly: false}
+
+	ok, err := checkSession(r, blogConfig)
 	if err != nil || ok == false {
 		t.Fatal("Valid session throws an error")
 	}
@@ -53,7 +55,7 @@ func TestSessionCheck(t *testing.T) {
 		},
 	}
 
-	ok, err = checkSession(r)
+	ok, err = checkSession(r, blogConfig)
 	if err == nil || ok == true {
 		t.Fatal("Invalid session doesn't throw an error")
 	}
@@ -64,7 +66,7 @@ func TestSessionCheck(t *testing.T) {
 		},
 	}
 
-	ok, err = checkSession(r)
+	ok, err = checkSession(r, blogConfig)
 	if err == nil || ok == true {
 		t.Fatal("Invalid session doesn't throw an error")
 	}
@@ -75,8 +77,63 @@ func TestSessionCheck(t *testing.T) {
 		},
 	}
 
-	ok, err = checkSession(r)
+	ok, err = checkSession(r, blogConfig)
 	if err == nil || ok == true {
 		t.Fatal("Invalid hash doesn't throw an error")
+	}
+
+	blogConfig = BlogConfiguration{Hash: "filler", ViewOnly: true}
+
+	r = &http.Request{
+		Header: map[string][]string{
+			"Cookie": {"microblog_h=test"},
+		},
+	}
+
+	ok, err = checkSession(r, blogConfig)
+	if err == nil || ok == true {
+		t.Fatal("Session check doesn't fail when in view only mode")
+	}
+
+	r = &http.Request{
+		Header: map[string][]string{
+			"Cookie": {"microblog_h=b0e292b2e7822a4cde578f5b10456dab1420820eb74f62e230e30b03f9fd6db1"},
+		},
+	}
+
+	ok, err = checkSession(r, blogConfig)
+	if err == nil || ok == true {
+		t.Fatal("Session check doesn't fail when in view only mode")
+	}
+
+	blogConfig = BlogConfiguration{Hash: "", ViewOnly: true}
+
+	r = &http.Request{
+		Header: map[string][]string{
+			"Cookie": {"microblog_h=test"},
+		},
+	}
+
+	ok, err = checkSession(r, blogConfig)
+	if err == nil || ok == true {
+		t.Fatal("Session check doesn't fail when in view only mode")
+	}
+
+	r = &http.Request{
+		Header: map[string][]string{
+			"Cookie": {"microblog_h=b0e292b2e7822a4cde578f5b10456dab1420820eb74f62e230e30b03f9fd6db1"},
+		},
+	}
+
+	ok, err = checkSession(r, blogConfig)
+	if err == nil || ok == true {
+		t.Fatal("Session check doesn't fail (with valid cookie) when in view only mode")
+	}
+
+	blogConfig = BlogConfiguration{Hash: "", ViewOnly: false}
+
+	ok, err = checkSession(r, blogConfig)
+	if err == nil || ok == true {
+		t.Fatal("Session check doesn't fail when hash is empty but view only mode is set to false")
 	}
 }
