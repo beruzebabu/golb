@@ -35,6 +35,9 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+    - name: Create archive
+      run: tar -c -f golb.tar golb LICENSE README.md templates posts files
+
     - name: Upload executable artifact
       uses: actions/upload-artifact@v4
       with:
