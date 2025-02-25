@@ -200,17 +200,18 @@ textarea {
   outline-width: 2px;
 }
 
-textarea, select, input {
+textarea, select, input, .TinyMDE {
   color: #4a4a4a;
   padding: 6px 10px; /* The 6px vertically centers text on FF, ignored by Webkit */
   margin-bottom: 10px;
-  background-color: #f1f1f1;
+  background-color: #ffffff;
   border: 1px solid #f1f1f1;
   border-radius: 4px;
   box-shadow: none;
   box-sizing: border-box;
 }
-textarea:focus, select:focus, input:focus {
+
+textarea:focus, select:focus, input:focus, .TinyMDE:focus {
   border: 1px solid #1d7484;
   outline: 0;
 }
