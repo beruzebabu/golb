@@ -53,6 +53,18 @@ func parsePost(filebytes []byte, postId string) (PostData, error) {
 	return PostData{PostHeader: header, Text: markdown.String()}, nil
 }
 
+func parseCreatePost(filebytes []byte, postId string) (CreatePostData, error) {
+	header, err := parsePostHeader(filebytes, postId)
+	if err != nil {
+		return CreatePostData{}, err
+	}
+	rstring := strings.ReplaceAll(string(filebytes), "\r", "")
+	splitstrings := strings.Split(rstring, "\n")
+	body := strings.Join(splitstrings[header.ContentIndex:], "\n")
+
+	return CreatePostData{Title: header.Title, Text: body}, nil
+}
+
 func readPost(filename string, postdir string) (PostData, error) {
 	filebytes, err := os.ReadFile(filepath.Join(postdir, filename))
 	if err != nil {
@@ -62,6 +74,20 @@ func readPost(filename string, postdir string) (PostData, error) {
 	post, err := parsePost(filebytes, filename)
 	if err != nil {
 		return PostData{}, err
+	}
+
+	return post, nil
+}
+
+func readCreatePost(filename string, postdir string) (CreatePostData, error) {
+	filebytes, err := os.ReadFile(filepath.Join(postdir, filename))
+	if err != nil {
+		return CreatePostData{}, err
+	}
+
+	post, err := parseCreatePost(filebytes, filename)
+	if err != nil {
+		return CreatePostData{}, err
 	}
 
 	return post, nil
@@ -90,6 +116,23 @@ func writePost(data CreatePostData, postdir string) (string, error) {
 
 	filename := filepath.Join(postdir, generatePostFilename(data.Title))
 	deletePost(generatePostFilename(data.Title), postdir)
+
+	err = os.WriteFile(filename, post, 0700)
+	if err != nil {
+		return "", err
+	}
+
+	return filename, nil
+}
+
+func writePostWithFilename(data CreatePostData, postname string, postdir string) (string, error) {
+	post, err := buildPost(data)
+	if err != nil {
+		return "", err
+	}
+
+	filename := filepath.Join(postdir, url.PathEscape(postname))
+	deletePost(url.PathEscape(postname), postdir)
 
 	err = os.WriteFile(filename, post, 0700)
 	if err != nil {

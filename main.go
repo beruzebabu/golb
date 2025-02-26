@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -245,6 +244,15 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	form := CreatePostData{}
 	if r.Method == "GET" {
+		tmpPost, err := readCreatePost("_createpost.temp", blogConfig.PostDir)
+		if err == nil {
+			form.Title = tmpPost.Title
+			form.Text = tmpPost.Text
+			form.HTMLMessage = "Restored last unpublished preview of previous session"
+			renderPage(w, "create.html", form)
+			return
+		}
+
 		renderPage(w, "create.html", form)
 		return
 	} else if r.Method == "POST" {
@@ -266,6 +274,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			form.HTMLMessage = "Published to file " + filename
+			_ = deletePost("_createpost.temp", blogConfig.PostDir)
 			refreshPosts(0)
 		} else {
 			post, err := buildPost(form)
@@ -283,6 +292,7 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			form.HTMLMessage = postdata.Text
+			_, _ = writePostWithFilename(form, "_createpost.temp", blogConfig.PostDir)
 		}
 		renderPage(w, "create.html", form)
 		return
@@ -307,23 +317,13 @@ func editPostHandler(w http.ResponseWriter, r *http.Request) {
 		postId = url.PathEscape(postId)
 		postId = fmt.Sprintf("%v.md", postId)
 
-		md, err := os.ReadFile(filepath.Join(blogConfig.PostDir, postId))
+		createPostData, err := readCreatePost(postId, blogConfig.PostDir)
 		if err != nil {
 			log.Println(err, postId)
 			renderPage(w, "error.html", "Post not found!")
 			return
 		}
-
-		post, err := parsePost(md, strings.TrimSuffix(postId, ".md"))
-		if err != nil {
-			log.Println(err, postId)
-			renderPage(w, "error.html", "Post not found!")
-			return
-		}
-		rstring := strings.ReplaceAll(string(md), "\r", "")
-		splitstrings := strings.Split(rstring, "\n")
-		form := CreatePostData{Title: post.Title, Text: strings.Join(splitstrings[post.ContentIndex:], "\n"), Publish: true, HTMLMessage: post.Text}
-		renderPage(w, "create.html", form)
+		renderPage(w, "create.html", createPostData)
 		return
 	}
 	renderPage(w, "error.html", "Page not found!")
