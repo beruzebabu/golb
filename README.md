@@ -4,6 +4,33 @@ Golb is a microblogging engine (written in Go) which leverages Markdown for cont
 
 #### Golb is not (yet) ready for production as I'm still working on the basics
 
+Golb can be run without arguments at all (view only mode), by using CLI arguments or by using environment variables.
+CLI arguments have precedence over environment variables.
+
+```
+Environment variables:
+- GOLB_TITLE
+- GOLB_PASSWORD
+- GOLB_PORT
+- GOLB_POSTDIR
+```
+
+```
+golb arguments:
+  -password string
+        specifies the management password
+  -port int 
+        specifies the port to use, default is 8080 (default 8080)
+  -postdir string 
+        specifies the directory to use for posts (default "posts")
+  -title string
+        specifies the blog title (default "Golb")
+  -h
+  		the above help text
+```
+
+*Tip: mount (blob)storage as a drive or folder and use this to store your posts (on my blog I have mounted blobstorage as the folder /posts on the pod running golb). This way, you automatically have all your posts backed up and you won't lose them when redeploying.*
+
 ## Key Features
 
 ### Markdown-Based Editing

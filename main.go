@@ -50,10 +50,10 @@ func parseFlags() BlogConfiguration {
 		defPort = 8080
 	}
 
-	title := flag.String("title", titleEnv, "specifies the blog title")
-	password := flag.String("password", passwordEnv, "specifies the management password")
-	port := flag.Int("port", defPort, "specifies the port to use, default is 8080")
-	postDir := flag.String("postdir", postEnv, "specifies the directory to use for posts")
+	title := flag.String("title", titleEnv, "specifies the blog title (env: GOLB_TITLE)")
+	password := flag.String("password", passwordEnv, "specifies the management password (env: GOLB_PASSWORD)")
+	port := flag.Int("port", defPort, "specifies the port to use, default is 8080 (env: GOLB_PORT)")
+	postDir := flag.String("postdir", postEnv, "specifies the directory to use for posts (env: GOLB_POSTDIR)")
 	flag.Parse()
 
 	*postDir = filepath.Clean(*postDir)
