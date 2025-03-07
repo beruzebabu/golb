@@ -31,6 +31,8 @@ golb arguments:
 
 *Tip: mount (blob)storage as a drive or folder and use this to store your posts (on my blog I have mounted blobstorage as the folder /posts on the pod running golb). This way, you automatically have all your posts backed up and you won't lose them when redeploying.*
 
+**When not running in view only mode, the ```/login``` and ```/create``` endpoints are made available to manage the blog.**
+
 ## Key Features
 
 ### Markdown-Based Editing
