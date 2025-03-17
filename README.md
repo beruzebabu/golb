@@ -13,18 +13,24 @@ Environment variables:
 - GOLB_PASSWORD
 - GOLB_PORT
 - GOLB_POSTDIR
+- GOLB_TEMPLATEDIR
+- GOLB_FILEDIR
 ```
 
 ```
 golb arguments:
+  -filedir string
+        specifies the directory to use for files (env: GOLB_FILEDIR) (default "files")
   -password string
-        specifies the management password
-  -port int 
-        specifies the port to use, default is 8080 (default 8080)
-  -postdir string 
-        specifies the directory to use for posts (default "posts")
+        specifies the management password (env: GOLB_PASSWORD)
+  -port int
+        specifies the port to use, default is 8080 (env: GOLB_PORT) (default 8080)
+  -postdir string
+        specifies the directory to use for posts (env: GOLB_POSTDIR) (default "posts")
+  -templatedir string
+        specifies the directory to use for templates (env: GOLB_TEMPLATEDIR) (default "templates")
   -title string
-        specifies the blog title (default "Golb")
+        specifies the blog title (env: GOLB_TITLE) (default "Golb")
   -h
   		the above help text
 ```
