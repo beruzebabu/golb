@@ -19,7 +19,7 @@ import (
 
 const TITLE string = "Golb"
 
-var templates *template.Template = template.Must(template.ParseGlob("templates/*.html"))
+var templates *template.Template
 var sessions map[string]time.Time = map[string]time.Time{}
 var postHeadersCache SyncCache[map[string]PostHeader] = SyncCache[map[string]PostHeader]{}
 var sortedPostIndexCache SyncCache[[]PostHeader] = SyncCache[[]PostHeader]{}
@@ -32,6 +32,8 @@ func parseFlags() BlogConfiguration {
 	passwordEnv := os.Getenv("GOLB_PASSWORD")
 	portEnv := os.Getenv("GOLB_PORT")
 	postEnv := os.Getenv("GOLB_POSTDIR")
+	templateEnv := os.Getenv("GOLB_TEMPLATEDIR")
+	fileEnv := os.Getenv("GOLB_FILEDIR")
 
 	if titleEnv == "" {
 		titleEnv = TITLE
@@ -45,6 +47,14 @@ func parseFlags() BlogConfiguration {
 		postEnv = "posts"
 	}
 
+	if templateEnv == "" {
+		templateEnv = "templates"
+	}
+
+	if fileEnv == "" {
+		fileEnv = "files"
+	}
+
 	defPort, err := strconv.Atoi(portEnv)
 	if err != nil {
 		defPort = 8080
@@ -54,15 +64,19 @@ func parseFlags() BlogConfiguration {
 	password := flag.String("password", passwordEnv, "specifies the management password (env: GOLB_PASSWORD)")
 	port := flag.Int("port", defPort, "specifies the port to use, default is 8080 (env: GOLB_PORT)")
 	postDir := flag.String("postdir", postEnv, "specifies the directory to use for posts (env: GOLB_POSTDIR)")
+	templateDir := flag.String("templatedir", templateEnv, "specifies the directory to use for templates (env: GOLB_TEMPLATEDIR)")
+	fileDir := flag.String("filedir", fileEnv, "specifies the directory to use for files (env: GOLB_FILEDIR)")
 	flag.Parse()
 
 	*postDir = filepath.Clean(*postDir)
+	*templateDir = filepath.Clean(*templateDir)
+	*fileDir = filepath.Clean(*fileDir)
 
-	log.Printf("parsed flags, title = %v, port = %v, postdir = %v", *title, *port, *postDir)
+	log.Printf("parsed flags, title = %v, port = %v, postdir = %v, templatedir = %v, filedir = %v", *title, *port, *postDir, *templateDir, *fileDir)
 
 	if *password == "" {
 		log.Println("no password supplied, running in view only mode")
-		return BlogConfiguration{Title: *title, Hash: "", Salt: [4]byte{}, Port: *port, PostDir: *postDir, ViewOnly: true}
+		return BlogConfiguration{Title: *title, Hash: "", Salt: [4]byte{}, Port: *port, PostDir: *postDir, TemplateDir: *templateDir, FileDir: *fileDir, ViewOnly: true}
 	}
 
 	randbytes := make([]byte, 4)
@@ -76,16 +90,23 @@ func parseFlags() BlogConfiguration {
 		log.Fatal(err)
 	}
 
-	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir, ViewOnly: false}
+	return BlogConfiguration{Title: *title, Hash: hashed, Salt: [4]byte(randbytes), Port: *port, PostDir: *postDir, TemplateDir: *templateDir, FileDir: *fileDir, ViewOnly: false}
 }
 
 func main() {
 	blogConfig = parseFlags()
 
+	tempDir := filepath.Join(blogConfig.TemplateDir, "*.html")
+	templates = template.Must(template.ParseGlob(tempDir))
+
+	if templates == nil {
+		log.Fatal("no templates loaded")
+	}
+
 	refreshPosts(0)
 
-	http.Handle("/files/", http.FileServer(http.Dir("")))
-	http.Handle("/favicon.ico", http.RedirectHandler("/files/favicon.ico", 301))
+	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(blogConfig.FileDir))))
+	http.Handle("/favicon.ico", http.RedirectHandler(filepath.Join(blogConfig.FileDir, "favicon.ico"), 301))
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/page/{pageIndex}", homeHandler)
 	http.HandleFunc("/posts", homeHandler)

@@ -1,12 +1,14 @@
 package main
 
 type BlogConfiguration struct {
-	Title    string
-	Hash     string
-	Salt     [4]byte
-	Port     int
-	PostDir  string
-	ViewOnly bool
+	Title       string
+	Hash        string
+	Salt        [4]byte
+	Port        int
+	PostDir     string
+	TemplateDir string
+	FileDir     string
+	ViewOnly    bool
 }
 
 func (bc BlogConfiguration) isPasswordless() bool {
